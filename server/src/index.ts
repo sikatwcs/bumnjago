@@ -7,14 +7,13 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import { PrismaClient } from '@prisma/client';
 import cookieParser from 'cookie-parser';
+import axios from 'axios';
 
-// Import routes
+// Import hanya router yang sudah ada
 import authRouter from './routes/auth';
-import adminRouter from './routes/admin';
-import questionerRouter from './routes/questioner';
 import paymentRouter from './routes/payments';
+import questionerRouter from './routes/questioner';
 import adminTryoutRouter from './routes/admin-tryout';
-import routes from './routes';
 
 // Initialize
 dotenv.config();
@@ -55,6 +54,7 @@ app.use((req, res, next) => {
     sameSite: 'none',
     domain: '157.66.34.226'
   });
+  res.header('Access-Control-Allow-Credentials', 'true');
   next();
 });
 
@@ -69,11 +69,9 @@ if (!fs.existsSync(uploadsDir)) {
 
 // Routes
 app.use('/api/auth', authRouter);
-app.use('/api/admin', adminRouter);
-app.use('/api/admin-tryout', adminTryoutRouter);
-app.use('/api/questioner', questionerRouter);
 app.use('/api/payments', paymentRouter);
-app.use('/api', routes);
+app.use('/api/questioner', questionerRouter);
+app.use('/api/admin-tryout', adminTryoutRouter);
 
 // Root route untuk pengecekan server
 app.get('/', (req, res) => {
@@ -148,3 +146,11 @@ export const upload = multer({
 export const getFileUrl = (filename: string) => {
   return `${process.env.UPLOAD_URL}/${filename}`;
 };
+
+const api = axios.create({
+  baseURL: import.meta.env.VITE_API_URL,
+  withCredentials: true,
+  headers: {
+    'Content-Type': 'application/json'
+  }
+});
