@@ -7,7 +7,6 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import { PrismaClient } from '@prisma/client';
 import cookieParser from 'cookie-parser';
-import axios from 'axios';
 
 // Import hanya router yang sudah ada
 import authRouter from './routes/auth';
@@ -145,11 +144,3 @@ export const upload = multer({
 export const getFileUrl = (filename: string) => {
   return `${process.env.UPLOAD_URL}/${filename}`;
 };
-
-const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL,
-  withCredentials: true,
-  headers: {
-    'Content-Type': 'application/json'
-  }
-});
