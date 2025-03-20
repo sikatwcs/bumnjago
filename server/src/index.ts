@@ -6,6 +6,7 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import { PrismaClient } from '@prisma/client';
+import cookieParser from 'cookie-parser';
 
 // Import routes
 import authRouter from './routes/auth';
@@ -13,6 +14,7 @@ import adminRouter from './routes/admin';
 import questionerRouter from './routes/questioner';
 import paymentRouter from './routes/payments';
 import adminTryoutRouter from './routes/admin-tryout';
+import routes from './routes';
 
 // Initialize
 dotenv.config();
@@ -33,29 +35,31 @@ const checkDatabaseConnection = async () => {
 // Tambahkan middleware CORS dengan konfigurasi yang lebih lengkap
 app.use(cors({
   origin: [
-    'http://localhost:5173', 
-    'http://localhost:5174', 
-    'http://localhost:5175', 
-    'http://157.66.34.226', 
-    'http://157.66.34.226:3000',
-    'https://your-app.vercel.app' // Sesuaikan dengan domain Vercel Anda
+    'http://localhost:5173',
+    'https://bumnjago.vercel.app',
+    'https://blue-sky-cbt.vercel.app'
   ],
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'Origin', 'X-Requested-With', 'Accept'],
   credentials: true,
-  maxAge: 86400 // 24 jam (dalam detik)
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
-// Middleware untuk request logging
+app.use(cookieParser());
+app.use(express.json());
+
+// Middleware untuk set cookie options
 app.use((req, res, next) => {
-  console.log(`${new Date().toISOString()} [${req.method}] ${req.url}`);
+  res.cookie('options', {
+    httpOnly: true,
+    secure: true,
+    sameSite: 'none',
+    domain: '157.66.34.226'
+  });
   next();
 });
 
-app.use(express.json());
-
 // Serve static files from uploads directory
-app.use('/uploads', express.static(path.join(__dirname, '..', process.env.UPLOAD_DIR || 'uploads')));
+app.use('/uploads', express.static('/var/www/uploads'));
 
 // Pastikan folder uploads ada
 const uploadsDir = path.join(__dirname, '../uploads');
@@ -69,6 +73,7 @@ app.use('/api/admin', adminRouter);
 app.use('/api/admin-tryout', adminTryoutRouter);
 app.use('/api/questioner', questionerRouter);
 app.use('/api/payments', paymentRouter);
+app.use('/api', routes);
 
 // Root route untuk pengecekan server
 app.get('/', (req, res) => {
@@ -89,7 +94,7 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, async () => {
   console.log(`Server berjalan di port ${PORT}`);
-  console.log(`CORS enabled for: ${['http://localhost:5173', 'http://localhost:5174', 'http://localhost:5175', 'http://157.66.34.226', 'http://157.66.34.226:3000', 'https://your-app.vercel.app'].join(', ')}`);
+  console.log(`CORS enabled for: ${['http://localhost:5173', 'https://bumnjago.vercel.app', 'https://blue-sky-cbt.vercel.app'].join(', ')}`);
   
   // Cek koneksi database
   const dbConnected = await checkDatabaseConnection();
