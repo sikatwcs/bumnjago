@@ -80,7 +80,7 @@ export const createPayment = async (transactionId: number) => {
       }
     );
 
-    const tripayData = response.data.data;
+    const tripayData = (response.data as any).data;
 
     // Update transaksi dengan data Tripay
     await prisma.transaction.update({
@@ -166,7 +166,7 @@ export const checkPaymentStatus = async (reference: string) => {
       }
     );
 
-    return response.data.data;
+    return (response.data as any).data;
   } catch (error) {
     console.error('Payment status check error:', error);
     throw error;
