@@ -35,8 +35,7 @@ const checkDatabaseConnection = async () => {
 app.use(cors({
   origin: [
     'http://localhost:5173',
-    'https://bumnjago.vercel.app',
-    'https://blue-sky-cbt.vercel.app'
+    'https://bumnjagos.vercel.app'
   ],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
@@ -91,8 +90,8 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
 // Start server
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, async () => {
-  console.log(`Server berjalan di port ${PORT}`);
-  console.log(`CORS enabled for: ${['http://localhost:5173', 'https://bumnjago.vercel.app', 'https://blue-sky-cbt.vercel.app'].join(', ')}`);
+  console.log(`Server running on port ${PORT}`);
+  console.log(`CORS enabled for: ${['http://localhost:5173', 'https://bumnjagos.vercel.app'].join(', ')}`);
   
   // Cek koneksi database
   const dbConnected = await checkDatabaseConnection();
