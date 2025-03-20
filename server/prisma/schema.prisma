@@ -1,0 +1,242 @@
+// This is your Prisma schema file,
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model User {
+  id                Int           @id @default(autoincrement())
+  email             String        @unique
+  password          String
+  resetToken        String?
+  resetTokenExpires DateTime?
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+  profile           Profile?
+  scores            Score[]
+  transactions      Transaction[]
+  payments          Payment[]
+  paidLists         PaidList[]
+  ownerships        Ownership[]
+  freeForms         FreeForm[]
+}
+
+model Admin {
+  id        Int      @id @default(autoincrement())
+  name      String
+  email     String   @unique
+  password  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Questioner {
+  id        Int      @id @default(autoincrement())
+  name      String
+  email     String   @unique
+  password  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Profile {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @unique
+  name      String
+  province  String
+  phone     String
+  gender    Gender
+  instance  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id])
+}
+
+model PaidList {
+  id           Int        @id @default(autoincrement())
+  userId       Int
+  tryoutListId Int
+  user         User       @relation(fields: [userId], references: [id])
+  tryoutList   TryoutList @relation(fields: [tryoutListId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, tryoutListId])
+}
+
+model TryoutList {
+  id           Int           @id @default(autoincrement())
+  title        String
+  price        BigInt
+  imageUrl     String?
+  description  String?
+  batch        Int
+  type         String
+  status       Boolean       @default(true)
+  isOnline     Boolean       @default(true)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  tryouts      Tryout[]
+  payments     Payment[]
+  paidLists    PaidList[]
+  ownerships   Ownership[]
+  scores       Score[]
+  transactions Transaction[]
+}
+
+model Tryout {
+  id               Int        @id @default(autoincrement())
+  tryoutListId     Int
+  number           Int
+  type             TestType
+  subType          SubType
+  question         String
+  explanation      String
+  imageUrl         String?
+  optionA          String
+  optionB          String
+  optionC          String
+  optionD          String
+  optionE          String
+  correctAnswer    String
+  createdAt        DateTime   @default(now())
+  updatedAt        DateTime   @updatedAt
+  tryoutList       TryoutList @relation(fields: [tryoutListId], references: [id], onDelete: Cascade)
+}
+
+model Score {
+  id           Int        @id @default(autoincrement())
+  userId       Int
+  tryoutListId Int
+  tiu          Int
+  twk          Int
+  tkp          Int
+  total        Int
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  user         User       @relation(fields: [userId], references: [id])
+  tryoutList   TryoutList @relation(fields: [tryoutListId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, tryoutListId])
+}
+
+model Transaction {
+  id            Int               @id @default(autoincrement())
+  userId        Int
+  tryoutListId  Int
+  amount        BigInt
+  status        TransactionStatus
+  paymentCode   String?
+  paymentMethod String?
+  paymentToken  String?
+  expiredAt     DateTime?
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+  user          User             @relation(fields: [userId], references: [id])
+  tryoutList    TryoutList       @relation(fields: [tryoutListId], references: [id])
+  payment       Payment?
+}
+
+model Payment {
+  id           Int        @id @default(autoincrement())
+  userId       Int
+  tryoutListId Int
+  transactionId Int       @unique
+  status       PaymentStatus @default(pending)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  user         User       @relation(fields: [userId], references: [id])
+  tryoutList   TryoutList @relation(fields: [tryoutListId], references: [id], onDelete: Cascade)
+  transaction  Transaction @relation(fields: [transactionId], references: [id])
+}
+
+model Information {
+  id          Int             @id @default(autoincrement())
+  title       String
+  description String?
+  imageUrl    String?
+  type        InformationType
+  url         String?
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+}
+
+model Answer {
+  id           Int    @id @default(autoincrement())
+  tryoutListId Int
+  number       Int
+  userId       Int
+  answer       String
+
+  @@unique([userId, tryoutListId, number])
+}
+
+model Ownership {
+  id           Int        @id @default(autoincrement())
+  userId       Int
+  tryoutListId Int
+  isDone       Boolean    @default(false)
+  user         User       @relation(fields: [userId], references: [id])
+  tryoutList   TryoutList @relation(fields: [tryoutListId], references: [id], onDelete: Cascade)
+}
+
+model FreeForm {
+  id           Int  @id @default(autoincrement())
+  userId       Int  @unique
+  tryoutListId Int
+  user         User @relation(fields: [userId], references: [id])
+}
+
+model Links {
+  id       Int    @id @default(autoincrement())
+  url      String
+  title    String
+  imageUrl String
+}
+
+enum InformationType {
+  banner
+  info
+  news
+}
+
+enum TransactionStatus {
+  pending
+  waiting
+  success
+  failed
+  expired
+}
+
+enum PaymentStatus {
+  pending
+  success
+  failed
+  expired
+}
+
+enum TestType {
+  TKD_BUMN
+  AKHLAK_BUMN
+  TWK_BUMN
+}
+
+enum SubType {
+  // TKD BUMN
+  verbal_logical_reasoning
+  number_sequence
+  word_classification
+  diagram_reasoning
+  // AKHLAK BUMN
+  penilaian_diri_akhlak
+  // TWK BUMN
+  wawasan_kebangsaan
+}
+
+enum Gender {
+  male
+  female
+} 
