@@ -12,15 +12,41 @@ router.use(authMiddleware);
 router.post('/create', async (req, res) => {
   try {
     const { tryoutId, method } = req.body;
-    const payment = await prisma.payment.create({
+    
+    // Ambil data tryoutList untuk mendapatkan price
+    const tryoutList = await prisma.tryoutList.findUnique({
+      where: { id: tryoutId }
+    });
+
+    if (!tryoutList) {
+      return res.status(404).json({ message: 'Tryout tidak ditemukan' });
+    }
+
+    // Buat transaction terlebih dahulu
+    const transaction = await prisma.transaction.create({
       data: {
-        tryoutId,
-        method,
-        status: 'PENDING'
+        userId: req.user.id,
+        tryoutListId: tryoutId,
+        amount: tryoutList.price,
+        status: 'pending'
       }
     });
+
+    // Buat payment sesuai schema
+    const payment = await prisma.payment.create({
+      data: {
+        userId: req.user.id,
+        price: Number(tryoutList.price),
+        tryoutListId: tryoutId,
+        tryoutid: tryoutId,
+        transactionId: transaction.id,
+        status: 'pending'
+      }
+    });
+
     res.json(payment);
   } catch (error) {
+    console.error('Create payment error:', error);
     res.status(500).json({ message: 'Server error' });
   }
 });

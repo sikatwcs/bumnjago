@@ -143,6 +143,8 @@ model Transaction {
 model Payment {
   id           Int        @id @default(autoincrement())
   userId       Int
+  price       Int
+  tryoutid     Int
   tryoutListId Int
   transactionId Int       @unique
   status       PaymentStatus @default(pending)

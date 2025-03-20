@@ -180,7 +180,7 @@ router.post('/:id/submit', authMiddleware, async (req, res) => {
       // Find the corresponding question and check if answer is correct
       const question = tryoutQuestions.find(q => q.id === answer.questionId);
       if (question && question.correctAnswer === answer.answer) {
-        const points = question.points || 5; // Default to 5 points if not specified
+        const points = 5 // Default to 5 points if not specified
         totalPoints += points;
         
         // Add points to the appropriate category

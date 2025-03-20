@@ -414,7 +414,6 @@ router.put('/profile', authMiddleware, async (req, res) => {
         phone,
         gender,
         instance,
-        updatedAt: new Date()
       };
       
       res.json(mockUsers[mockUserIndex].profile);
