@@ -187,6 +187,4 @@ export const supabase = {
   }
 };
 
-console.log(`API configured to use: ${baseURL}`);
-
 export default api; 
