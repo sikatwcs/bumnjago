@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 // Gunakan environment variable untuk base URL
-const baseURL = import.meta.env.VITE_API_URL || 'http://157.66.34.226:3000';
+const baseURL = `${import.meta.env.VITE_API_URL || 'http://157.66.34.226:3000'}/api`;
 const isDevelopment = import.meta.env.MODE === 'development';
 
 const api = axios.create({
@@ -16,6 +16,8 @@ const api = axios.create({
 console.log('=== API Configuration ===');
 console.log(`> Base URL: ${baseURL}`);
 console.log(`> Running on: ${isDevelopment ? 'development' : 'production'}`);
+console.log(`> Environment: ${import.meta.env.MODE}`);
+console.log(`> API URL: ${import.meta.env.VITE_API_URL}`);
 console.log('========================');
 
 // Add request interceptor
@@ -46,17 +48,21 @@ api.interceptors.request.use(
     // Pastikan credentials selalu true
     config.withCredentials = true;
     
+    // Log request untuk debugging
+    const fullURL = `${config.baseURL}${config.url}`.replace(/\/\//g, '/').replace('://', '://');
     console.log('Sending request:', {
       url: config.url,
       baseURL: config.baseURL,
-      fullURL: `${config.baseURL}${config.url}`,
+      fullURL,
       method: config.method,
-      headers: config.headers
+      headers: config.headers,
+      data: config.data
     });
     
     return config;
   },
   (error) => {
+    console.error('Request Error:', error);
     return Promise.reject(error);
   }
 );
