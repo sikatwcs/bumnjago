@@ -34,27 +34,34 @@ const checkDatabaseConnection = async () => {
 app.use(cors({
   origin: [
     'http://localhost:5173',
-    'https://bumnjagos.vercel.app'
+    'https://bumnjagos.vercel.app'  // domain Vercel Anda
   ],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  allowedHeaders: ['Content-Type', 'Authorization', 'Origin'],
+  exposedHeaders: ['Set-Cookie']
 }));
 
-app.use(cookieParser());
-app.use(express.json());
+// Tambahkan middleware untuk cookie
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Credentials', 'true');
+  res.header('Access-Control-Allow-Origin', req.headers.origin || 'https://bumnjagos.vercel.app');
+  next();
+});
 
-// Middleware untuk set cookie options
+// Konfigurasi cookie
+app.use(cookieParser());
 app.use((req, res, next) => {
   res.cookie('options', {
     httpOnly: true,
     secure: true,
     sameSite: 'none',
-    domain: '157.66.34.226'
+    path: '/'
   });
-  res.header('Access-Control-Allow-Credentials', 'true');
   next();
 });
+
+app.use(express.json());
 
 // Serve static files from uploads directory
 app.use('/uploads', express.static('/var/www/uploads'));
