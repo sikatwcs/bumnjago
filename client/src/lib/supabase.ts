@@ -1,19 +1,21 @@
 import axios from 'axios';
 
-// Mode development
-const isDevelopment = true; // true untuk development, false untuk production
-const baseURL = isDevelopment ? 'http://localhost:3000/api' : 'https://api.jagocpns.com/api';
+// Gunakan environment variable untuk base URL
+const baseURL = import.meta.env.VITE_API_URL || 'http://157.66.34.226:3000';
+const isDevelopment = import.meta.env.MODE === 'development';
 
 const api = axios.create({
   baseURL,
+  withCredentials: true,
   headers: {
     'Content-Type': 'application/json',
-  },
+    'Accept': 'application/json'
+  }
 });
 
 console.log('=== API Configuration ===');
 console.log(`> Base URL: ${baseURL}`);
-console.log(`> Running on: ${isDevelopment ? 'localhost' : 'production'}`);
+console.log(`> Running on: ${isDevelopment ? 'development' : 'production'}`);
 console.log('========================');
 
 // Add request interceptor
@@ -40,8 +42,18 @@ api.interceptors.request.use(
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+
+    // Pastikan credentials selalu true
+    config.withCredentials = true;
     
-    console.log(`Sending request to: ${config.baseURL}${config.url}`);
+    console.log('Sending request:', {
+      url: config.url,
+      baseURL: config.baseURL,
+      fullURL: `${config.baseURL}${config.url}`,
+      method: config.method,
+      headers: config.headers
+    });
+    
     return config;
   },
   (error) => {
@@ -52,6 +64,11 @@ api.interceptors.request.use(
 // Add response interceptor
 api.interceptors.response.use(
   (response) => {
+    console.log('Response received:', {
+      url: response.config.url,
+      status: response.status,
+      data: response.data
+    });
     return response;
   },
   (error) => {
@@ -78,16 +95,21 @@ api.interceptors.response.use(
       }
     } else if (error.response) {
       // Server merespons dengan kode status error
-      console.error('API Error:', error.response.status, error.response.data);
+      console.error('API Error:', {
+        status: error.response.status,
+        data: error.response.data,
+        url: error.config?.url
+      });
     } else if (error.request) {
       // Request dibuat tapi tidak ada respons
-      console.error('API Error: No response received', error.request);
-      if (error.code === 'ECONNABORTED') {
-        console.error('API Error: Request timeout. Server mungkin sedang sibuk atau tidak tersedia.');
-      }
+      console.error('Network Error:', {
+        message: 'No response received',
+        code: error.code,
+        url: error.config?.url
+      });
     } else {
       // Terjadi error saat menyiapkan request
-      console.error('API Error:', error.message);
+      console.error('Request Error:', error.message);
     }
     return Promise.reject(error);
   }
