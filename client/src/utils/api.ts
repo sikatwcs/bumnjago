@@ -1,9 +1,11 @@
 import axios from 'axios';
 
 // Dapatkan base URL dari environment variable
-const baseURL = import.meta.env.VITE_API_URL;
+const baseURL = import.meta.env.VITE_API_URL || 'http://157.66.34.226:3000';
 
-console.log('API Base URL:', baseURL); // Untuk debugging
+// Log untuk debugging
+console.log('Current environment:', import.meta.env.MODE);
+console.log('API Base URL:', baseURL);
 
 const api = axios.create({
   baseURL,
@@ -26,7 +28,8 @@ api.interceptors.request.use(
       method: config.method,
       headers: config.headers,
       data: config.data,
-      baseURL: config.baseURL
+      baseURL: config.baseURL,
+      fullURL: `${config.baseURL}${config.url}`
     });
     
     return config;
@@ -51,7 +54,8 @@ api.interceptors.response.use(
     console.error('Response Error:', {
       status: error.response?.status,
       data: error.response?.data,
-      message: error.message
+      message: error.message,
+      config: error.config
     });
     return Promise.reject(error);
   }
