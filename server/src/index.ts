@@ -98,8 +98,8 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
 });
 
 // Start server
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, async () => {
+const PORT = Number(process.env.PORT) || 3000;
+app.listen(PORT, '0.0.0.0', async () => {
   console.log(`Server running on port ${PORT}`);
   console.log(`CORS enabled for: ${['http://localhost:5173', 'https://bumnjagos.vercel.app'].join(', ')}`);
   
