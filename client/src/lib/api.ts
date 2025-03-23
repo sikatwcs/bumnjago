@@ -17,26 +17,65 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
+  timeout: 10000, // 10 seconds timeout
 });
 
-// Add token to requests if available
-api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token') || localStorage.getItem('questioner-token');
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
-});
-
-// Handle 401 responses
-api.interceptors.response.use(
-  (response) => response,
+// Add request interceptor for debugging
+api.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('token') || localStorage.getItem('questioner-token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    
+    // Log request details
+    console.log('Request:', {
+      url: `${config.baseURL}${config.url}`,
+      method: config.method,
+      headers: config.headers,
+      data: config.data
+    });
+    
+    return config;
+  },
   (error) => {
+    console.error('Request Error:', error);
+    return Promise.reject(error);
+  }
+);
+
+// Add response interceptor for debugging
+api.interceptors.response.use(
+  (response) => {
+    // Log successful response
+    console.log('Response:', {
+      status: response.status,
+      data: response.data,
+      headers: response.headers
+    });
+    return response;
+  },
+  (error) => {
+    // Log detailed error information
+    console.error('Response Error:', {
+      message: error.message,
+      status: error.response?.status,
+      data: error.response?.data,
+      config: {
+        url: error.config?.url,
+        method: error.config?.method,
+        baseURL: error.config?.baseURL,
+        headers: error.config?.headers
+      }
+    });
+
     if (error.response?.status === 401) {
+      console.log('Unauthorized access, clearing tokens...');
       localStorage.removeItem('token');
       localStorage.removeItem('questioner-token');
-      window.location.href = '/questioner/login';
+      window.location.href = '/auth/login';
     }
+
     return Promise.reject(error);
   }
 );
