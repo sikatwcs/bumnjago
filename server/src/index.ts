@@ -35,6 +35,8 @@ app.use(cors({
   origin: [
     'http://localhost:5173',
     'https://bumnjagos.vercel.app',
+    'https://jagobumn.com',
+    'https://www.jagobumn.com',
     /\.vercel\.app$/  // Mengizinkan semua subdomain vercel.app
   ],
   credentials: true,
@@ -49,7 +51,7 @@ app.options('*', cors());
 // Middleware untuk set header secara global
 app.use((req, res, next) => {
   res.header('Access-Control-Allow-Credentials', 'true');
-  res.header('Access-Control-Allow-Origin', req.headers.origin || 'https://bumnjagos.vercel.app');
+  res.header('Access-Control-Allow-Origin', req.headers.origin || 'https://jagobumn.com');
   next();
 });
 
@@ -101,7 +103,7 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
 const PORT = Number(process.env.PORT) || 3000;
 app.listen(PORT, '0.0.0.0', async () => {
   console.log(`Server running on port ${PORT}`);
-  console.log(`CORS enabled for: ${['http://localhost:5173', 'https://bumnjagos.vercel.app'].join(', ')}`);
+  console.log(`CORS enabled for: ${['http://localhost:5173', 'https://bumnjagos.vercel.app', 'https://jagobumn.com', 'https://www.jagobumn.com'].join(', ')}`);
   
   // Cek koneksi database
   const dbConnected = await checkDatabaseConnection();

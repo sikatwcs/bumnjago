@@ -1,7 +1,8 @@
 import axios from 'axios';
 
-// Dapatkan base URL dari environment variable
-const baseURL = import.meta.env.VITE_API_URL;
+// Langsung set base URL untuk sementara
+const baseURL = 'http://157.66.34.226:3000';
+// const baseURL = import.meta.env.VITE_API_URL; // Komentar sementara
 
 console.log('API Base URL:', baseURL); // Untuk debugging
 
