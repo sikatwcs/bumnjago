@@ -1,8 +1,8 @@
 import axios from 'axios';
 
-// Langsung set base URL untuk sementara
-const baseURL = 'http://157.66.34.226:3000';
-// const baseURL = import.meta.env.VITE_API_URL; // Komentar sementara
+// Dapatkan base URL dari environment variable
+const baseURL = import.meta.env.VITE_API_URL;
+// const baseURL = 'http://157.66.34.226:3000'; // Hapus atau komentar
 
 console.log('API Base URL:', baseURL); // Untuk debugging
 
@@ -18,8 +18,13 @@ const api = axios.create({
 // Add request interceptor untuk debugging
 api.interceptors.request.use(
   (config) => {
-    // Pastikan credentials selalu true
+    // Pastikan credentials selalu true untuk setiap request
     config.withCredentials = true;
+    
+    // Pastikan credentials disertakan
+    if (config.headers) {
+      config.headers['Access-Control-Allow-Credentials'] = 'true';
+    }
     
     // Log request untuk debugging
     console.log('Request:', {
@@ -27,7 +32,8 @@ api.interceptors.request.use(
       method: config.method,
       headers: config.headers,
       data: config.data,
-      baseURL: config.baseURL
+      baseURL: config.baseURL,
+      withCredentials: config.withCredentials
     });
     
     return config;
