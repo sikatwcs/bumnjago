@@ -30,30 +30,13 @@ const checkDatabaseConnection = async () => {
   }
 };
 
-// Tambahkan middleware CORS dengan konfigurasi yang lebih lengkap
+// Konfigurasi CORS
 app.use(cors({
-  origin: [
-    'http://localhost:5173',
-    'https://bumnjagos.vercel.app',
-    'https://jagobumn.com',
-    'https://www.jagobumn.com',
-    /\.vercel\.app$/  // Mengizinkan semua subdomain vercel.app
-  ],
+  origin: 'https://www.jagobumn.com',
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'Origin', 'Accept', 'X-Requested-With'],
-  exposedHeaders: ['Set-Cookie']
+  allowedHeaders: ['Content-Type', 'Authorization', 'Origin', 'Accept', 'X-Requested-With']
 }));
-
-// Middleware untuk menghandle preflight requests
-app.options('*', cors());
-
-// Middleware untuk set header secara global
-app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Credentials', 'true');
-  res.header('Access-Control-Allow-Origin', req.headers.origin || 'https://jagobumn.com');
-  next();
-});
 
 // Konfigurasi cookie
 app.use(cookieParser());
@@ -85,12 +68,33 @@ app.use('/api/questioner', questionerRouter);
 app.use('/api/admin-tryout', adminTryoutRouter);
 
 // Root route untuk pengecekan server
-app.get('/', (req, res) => {
-  res.json({ 
-    message: 'Blue Sky CBT API Server',
-    status: 'Running',
-    version: '1.0.0'
-  });
+app.get('/', (req: express.Request, res: express.Response, next: express.NextFunction) => {
+  // Jika request ke API endpoint, kembalikan informasi API
+  if (req.originalUrl === '/') {
+    res.json({
+      message: 'Blue Sky CBT API Server',
+      status: 'Running',
+      version: '1.0.0'
+    });
+  } else {
+    // Untuk path lain, lewatkan ke handler berikutnya
+    next();
+  }
+});
+
+// PENTING: Handler untuk client-side routing harus berada SETELAH semua route API
+// Ini akan menangani semua request yang tidak ditangani oleh route lain
+app.use('*', (req, res) => {
+  // Periksa jika ini adalah request ke API
+  if (req.originalUrl.startsWith('/api/')) {
+    return res.status(404).json({ 
+      status: 'error',
+      message: 'API endpoint not found' 
+    });
+  }
+  
+  // Untuk akses direct ke URL frontend, kembalikan ke index.html
+  res.sendFile(path.join(__dirname, '../../client/dist/index.html'));
 });
 
 // Error handling
