@@ -8,7 +8,7 @@ interface ImportMeta {
 
 import axios from 'axios';
 
-const baseURL = import.meta.env.VITE_API_URL;
+const baseURL = `${import.meta.env.VITE_API_URL}/api`;
 console.log('Using API baseURL:', baseURL);
 
 const api = axios.create({
@@ -27,12 +27,7 @@ api.interceptors.request.use(
     let token;
 
     // Log full URL yang akan dipanggil
-    console.log('Request details:', {
-      fullUrl: `${config.baseURL}${config.url}`,
-      baseURL: config.baseURL,
-      url: config.url,
-      method: config.method
-    });
+    console.log('Full URL:', `${config.baseURL}${config.url}`);
 
     if (url.includes('/admin/')) {
       token = localStorage.getItem('admin-token');
