@@ -144,23 +144,29 @@ export const authenticateAdmin = async (req: Request, res: Response, next: NextF
 
 export const authenticateQuestioner = async (req: Request, res: Response, next: NextFunction) => {
   const authHeader = req.headers['authorization'];
+  console.log('Auth header:', authHeader);
   const token = authHeader && authHeader.split(' ')[1];
+  console.log('Token:', token);
 
   if (!token) {
     return res.status(401).json({ message: 'Authentication token required' });
   }
 
   try {
+    console.log('Mencoba verifikasi token dengan JWT_SECRET:', process.env.JWT_SECRET);
     const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key') as any;
+    console.log('Token berhasil diverifikasi:', decoded);
     
     // Cek apakah database tersedia
     const dbAvailable = await isDatabaseAvailable();
+    console.log('Database tersedia:', dbAvailable);
     
     if (dbAvailable) {
       // Cek apakah ini questioner
       const questioner = await prisma.questioner.findUnique({
         where: { id: decoded.id }
       });
+      console.log('Questioner ditemukan:', questioner);
       
       if (!questioner) {
         return res.status(403).json({ message: 'Questioner access required' });
@@ -179,6 +185,10 @@ export const authenticateQuestioner = async (req: Request, res: Response, next: 
     
     next();
   } catch (error) {
-    return res.status(403).json({ message: 'Invalid token' });
+    console.error('Error verifikasi token:', error);
+    return res.status(403).json({ 
+      message: 'Invalid token',
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
   }
 }; 
