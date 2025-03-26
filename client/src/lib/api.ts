@@ -20,82 +20,142 @@ const api = axios.create({
   timeout: 10000, // 10 seconds timeout
 });
 
-// Add request interceptor for debugging
+// Request interceptor
 api.interceptors.request.use(
   (config) => {
     const url = config.url?.toLowerCase() || '';
     let token;
 
-    // Log full URL yang akan dipanggil
-    console.log('Full URL:', `${config.baseURL}${config.url}`);
+    // Log request details
+    console.log('Request URL:', url);
 
-    if (url.includes('/admin/')) {
+    // Determine which token to use based on URL
+    if (url.includes('/admin/') || url.includes('/admin-tryout/')) {
       token = localStorage.getItem('admin-token');
-      console.log('Menggunakan admin token');
+      console.log('Using admin token for admin endpoint:', url);
     } else if (url.includes('/questioner/')) {
       token = localStorage.getItem('questioner-token');
-      console.log('Menggunakan questioner token');
+      console.log('Using questioner token for questioner endpoint:', url);
     } else {
       token = localStorage.getItem('token');
-      console.log('Menggunakan user token');
+      console.log('Using user token for endpoint:', url);
     }
 
-    console.log('Token yang digunakan:', token);
+    // Log full request URL
+    console.log('Sending request to:', `${config.baseURL}${config.url}`);
 
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
-    
-    // Log request details
-    console.log('Request:', {
-      url: `${config.baseURL}${config.url}`,
-      method: config.method,
-      headers: config.headers,
-      data: config.data
-    });
-    
+
     return config;
   },
   (error) => {
-    console.error('Error dalam request interceptor:', error);
+    console.error('Request error:', error);
     return Promise.reject(error);
   }
 );
 
-// Add response interceptor for debugging
+// Response interceptor
 api.interceptors.response.use(
   (response) => {
     // Log successful response
-    console.log('Response:', {
+    console.log('Response received:', {
+      endpoint: response.config.url,
       status: response.status,
-      data: response.data,
-      headers: response.headers
+      data: response.data
     });
     return response;
   },
   (error) => {
-    // Log detailed error information
-    console.error('Response Error:', {
-      message: error.message,
+    // Log error response
+    console.error('Response error:', {
+      endpoint: error.config?.url,
       status: error.response?.status,
-      data: error.response?.data,
-      config: {
-        url: error.config?.url,
-        method: error.config?.method,
-        baseURL: error.config?.baseURL,
-        headers: error.config?.headers
-      }
+      message: error.message,
+      data: error.response?.data
     });
 
+    // Handle unauthorized access based on URL path
     if (error.response?.status === 401) {
-      console.log('Unauthorized access, clearing tokens...');
-      localStorage.removeItem('token');
-      localStorage.removeItem('questioner-token');
-      window.location.href = '/auth/login';
+      const url = error.config?.url?.toLowerCase() || '';
+      
+      if (url.includes('/admin/') || url.includes('/admin-tryout/')) {
+        localStorage.removeItem('admin-token');
+        window.location.href = '/admin/login';
+      } else if (url.includes('/questioner/')) {
+        localStorage.removeItem('questioner-token');
+        window.location.href = '/questioner/login';
+      } else {
+        localStorage.removeItem('token');
+        window.location.href = '/login';
+      }
     }
 
     return Promise.reject(error);
   }
 );
+
+// Helper functions for common API calls
+
+// Admin API calls
+export const adminAPI = {
+  login: async (email: string, password: string) => {
+    return api.post('/admin/login', { email, password });
+  },
+  getProfile: async () => {
+    return api.get('/admin/profile');
+  },
+  getTryoutLists: async () => {
+    return api.get('/admin-tryout/tryoutlists');
+  },
+  createTryout: async (data: any) => {
+    return api.post('/admin-tryout/tryoutlists', data);
+  },
+  updateTryout: async (id: number, data: any) => {
+    return api.put(`/admin-tryout/tryoutlists/${id}`, data);
+  },
+  deleteTryout: async (id: number) => {
+    return api.delete(`/admin-tryout/tryoutlists/${id}`);
+  }
+};
+
+// Questioner API calls
+export const questionerAPI = {
+  login: async (email: string, password: string) => {
+    return api.post('/questioner/login', { email, password });
+  },
+  getProfile: async () => {
+    return api.get('/questioner/profile');
+  },
+  getTryoutLists: async () => {
+    return api.get('/questioner/tryoutlists');
+  },
+  getTryoutDetails: async (id: number) => {
+    return api.get(`/questioner/tryouts/${id}`);
+  },
+  createQuestion: async (data: any) => {
+    return api.post('/questioner/tryouts', data);
+  },
+  updateQuestion: async (id: number, data: any) => {
+    return api.put(`/questioner/tryouts/${id}`, data);
+  }
+};
+
+// User API calls
+export const userAPI = {
+  login: async (email: string, password: string) => {
+    return api.post('/auth/login', { email, password });
+  },
+  register: async (data: any) => {
+    return api.post('/auth/register', data);
+  },
+  getProfile: async () => {
+    return api.get('/auth/me');
+  },
+  getAvailableTryouts: async () => {
+    return api.get('/tryout/available');
+  }
+};
 
 export default api;

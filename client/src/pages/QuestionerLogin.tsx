@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useQuestionerAuth } from "@/contexts/QuestionerAuthContext";
+import { toast } from "react-hot-toast";
+import { questionerAPI } from "../lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -9,37 +10,28 @@ import { AlertCircle, Loader2 } from "lucide-react";
 
 const QuestionerLogin = () => {
   const navigate = useNavigate();
-  const { login } = useQuestionerAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
+  const [loading, setLoading] = useState(false);
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError("");
-    setIsLoading(true);
-    
-    console.log("Attempting questioner login...", { email });
     
     try {
-      const success = await login(email, password);
+      setLoading(true);
+      const response = await questionerAPI.login(email, password);
       
-      console.log("Login result:", success);
+      // Simpan token
+      localStorage.setItem("questioner-token", response.data.token);
       
-      if (success) {
-        // Redirect ke dashboard questioner
-        console.log("Redirecting to questioner dashboard");
-        navigate('/questioner/dashboard');
-      } else {
-        console.error("Login failed");
-        setError("Email atau password tidak valid");
-      }
+      toast.success("Login berhasil");
+      navigate("/questioner/dashboard");
     } catch (error) {
       console.error("Login error:", error);
-      setError("Terjadi kesalahan saat login");
+      toast.error("Login gagal. Periksa email dan password Anda.");
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
@@ -64,7 +56,7 @@ const QuestionerLogin = () => {
           </Alert>
         )}
 
-        <form onSubmit={handleLogin} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="email">Email</Label>
             <Input
@@ -92,9 +84,9 @@ const QuestionerLogin = () => {
           <Button 
             type="submit" 
             className="w-full bg-red-600 hover:bg-red-700"
-            disabled={isLoading}
+            disabled={loading}
           >
-            {isLoading ? (
+            {loading ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 Memproses...

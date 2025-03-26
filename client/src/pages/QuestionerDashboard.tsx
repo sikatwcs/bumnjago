@@ -15,6 +15,7 @@ import { Label } from "@/components/ui/label";
 import { LogOut, Plus, Save, Trash, Image as ImageIcon, Loader2 } from "lucide-react";
 import api from "@/lib/api";
 import { toast } from "sonner";
+import { questionerAPI } from '../lib/api';
 
 interface Tryout {
   id: number;
@@ -106,12 +107,16 @@ const QuestionerDashboard = () => {
   const [imagePreview, setImagePreview] = useState<string>('');
 
   useEffect(() => {
-    if (!questioner) {
+    const token = localStorage.getItem('questioner-token');
+    if (!token) {
+      console.log('Redirecting to: /questioner/login');
       navigate('/questioner/login');
-    } else {
-      fetchData();
+      return;
     }
-  }, [questioner, navigate]);
+
+    // Fetch data
+    fetchData();
+  }, [navigate]);
 
   useEffect(() => {
     if (selectedTryoutList) {
@@ -125,8 +130,8 @@ const QuestionerDashboard = () => {
       
       // Fetch tryout lists dan profile secara parallel
       const [tryoutResponse, profileResponse] = await Promise.all([
-        api.get('/questioner/tryoutlists'),
-        api.get('/questioner/profile')
+        questionerAPI.getTryoutLists(),
+        questionerAPI.getProfile()
       ]);
 
       setTryoutLists(tryoutResponse.data);
@@ -270,7 +275,7 @@ const QuestionerDashboard = () => {
   };
 
   const handleLogout = () => {
-    logout();
+    localStorage.removeItem('questioner-token');
     navigate('/questioner/login');
   };
 
