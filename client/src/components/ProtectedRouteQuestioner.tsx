@@ -1,31 +1,15 @@
-import { ReactNode, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useQuestionerAuth } from '@/contexts/QuestionerAuthContext';
+import { Navigate } from 'react-router-dom';
+import { useQuestionerAuth } from '../contexts/QuestionerAuthContext';
 
 interface ProtectedRouteQuestionerProps {
-  children: ReactNode;
+  children: React.ReactNode;
 }
 
-const ProtectedRouteQuestioner = ({ children }: ProtectedRouteQuestionerProps) => {
-  const { questioner, loading } = useQuestionerAuth();
-  const navigate = useNavigate();
+const ProtectedRouteQuestioner: React.FC<ProtectedRouteQuestionerProps> = ({ children }) => {
+  const { isAuthenticated } = useQuestionerAuth();
 
-  useEffect(() => {
-    if (!loading && !questioner) {
-      navigate('/questioner/login');
-    }
-  }, [questioner, loading, navigate]);
-
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-red-600"></div>
-      </div>
-    );
-  }
-
-  if (!questioner) {
-    return null;
+  if (!isAuthenticated) {
+    return <Navigate to="/questioner/login" replace />;
   }
 
   return <>{children}</>;
