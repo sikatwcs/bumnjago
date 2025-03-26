@@ -3,21 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { useQuestionerAuth } from "@/contexts/QuestionerAuthContext";
 import { Button } from "@/components/ui/button";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import {
   Select,
   SelectContent,
   SelectItem,
@@ -85,9 +70,8 @@ const QuestionerDashboard = () => {
   const [tryouts, setTryouts] = useState<Tryout[]>([]);
   const [tryoutLists, setTryoutLists] = useState<TryoutList[]>([]);
   const [selectedTryoutList, setSelectedTryoutList] = useState<number>(0);
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
   
   const [formData, setFormData] = useState<Partial<Tryout>>({
     id: 0,
@@ -113,21 +97,15 @@ const QuestionerDashboard = () => {
     if (!questioner) {
       navigate('/questioner/login');
     } else {
-      loadData();
+      fetchTryoutLists();
     }
   }, [questioner, navigate]);
 
-  const loadData = async () => {
-    try {
-      setIsLoading(true);
-      await fetchTryoutLists();
-    } catch (error) {
-      console.error('Error loading data:', error);
-      toast.error("Gagal memuat data");
-    } finally {
-      setIsLoading(false);
+  useEffect(() => {
+    if (selectedTryoutList) {
+      fetchTryouts(selectedTryoutList);
     }
-  };
+  }, [selectedTryoutList]);
 
   const fetchTryouts = async (tryoutListId: number) => {
     try {
@@ -144,30 +122,17 @@ const QuestionerDashboard = () => {
 
   const fetchTryoutLists = async () => {
     try {
-      console.log('Fetching tryout lists...');
-      console.log('Token:', localStorage.getItem('questioner-token'));
-      const response = await api.get('/questioner/tryoutlists');
-      console.log('Tryout lists response:', response.data);
-      setTryoutLists(response.data);
+      console.log('Memulai fetch tryout lists...');
+      const token = localStorage.getItem('questioner-token');
+      console.log('Token questioner:', token);
       
-      // Jika ada tryout list, pilih yang pertama
-      if (response.data.length > 0) {
-        setSelectedTryoutList(response.data[0].id);
-        await fetchTryouts(response.data[0].id);
-      }
+      const response = await api.get('/api/questioner/tryoutlists');
+      console.log('Response dari API:', response.data);
+      
+      setTryoutLists(response.data);
     } catch (error) {
       console.error('Error fetching tryout lists:', error);
-      toast.error("Gagal memuat daftar tryout");
-    }
-  };
-
-  const handleLogout = async () => {
-    try {
-      await logout();
-      navigate('/questioner/login');
-    } catch (error) {
-      console.error('Logout error:', error);
-      toast.error("Gagal logout");
+      toast.error('Gagal memuat daftar tryout');
     }
   };
 
@@ -186,7 +151,7 @@ const QuestionerDashboard = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      setIsSaving(true);
+      setIsLoading(true);
       const formDataToSend = new FormData();
       
       // Menambahkan semua field yang diperlukan
@@ -228,9 +193,34 @@ const QuestionerDashboard = () => {
         toast.success("Soal berhasil diperbarui");
       }
 
+      // Set imageUrl dari response
+      if (response?.data?.imageUrl) {
+        setFormData(prev => ({
+          ...prev,
+          imageUrl: response.data.imageUrl
+        }));
+      }
+
       // Reset form dan refresh data
-      resetForm();
-      setIsDialogOpen(false);
+      setFormData({
+        id: 0,
+        tryoutListId: selectedTryoutList,
+        number: tryouts.length + 1,
+        question: '',
+        explanation: '',
+        imageUrl: '',
+        optionA: '',
+        optionB: '',
+        optionC: '',
+        optionD: '',
+        optionE: '',
+        correctAnswer: '',
+        type: TestType.TKD_BUMN,
+        subType: SubType.verbal_logical_reasoning
+      });
+      setSelectedImage(null);
+      setImagePreview('');
+      setIsModalOpen(false);
       
       // Refresh tryouts list
       fetchTryouts(selectedTryoutList);
@@ -238,7 +228,7 @@ const QuestionerDashboard = () => {
       console.error('Error submitting tryout:', error);
       toast.error("Gagal menyimpan soal");
     } finally {
-      setIsSaving(false);
+      setIsLoading(false);
     }
   };
 
@@ -246,7 +236,7 @@ const QuestionerDashboard = () => {
     setFormData({
       id: 0,
       tryoutListId: selectedTryoutList,
-      number: tryouts.length + 1,
+      number: 0,
       question: '',
       explanation: '',
       imageUrl: '',
@@ -263,317 +253,399 @@ const QuestionerDashboard = () => {
     setImagePreview('');
   };
 
+  const handleLogout = () => {
+    logout();
+    navigate('/questioner/login');
+  };
+
+  const handleDelete = async (id: number) => {
+    try {
+      await api.delete(`/admin-tryout/tryouts/${id}`);
+      toast.success('Soal berhasil dihapus');
+      fetchTryouts(selectedTryoutList);
+    } catch (error) {
+      toast.error('Gagal menghapus soal');
+    }
+  };
+
+  const handleNextQuestion = () => {
+    // Cari soal berikutnya berdasarkan nomor urut
+    const currentIndex = tryouts.findIndex(t => t.id === formData.id);
+    if (currentIndex < tryouts.length - 1) {
+      const nextQuestion = tryouts[currentIndex + 1];
+      setFormData(nextQuestion);
+      if (nextQuestion.imageUrl) {
+        setImagePreview(nextQuestion.imageUrl);
+      } else {
+        setImagePreview('');
+      }
+    } else {
+      // Jika sudah di soal terakhir, reset form untuk membuat soal baru
+      resetForm();
+    }
+  };
+
   return (
-    <div className="min-h-screen bg-gray-100">
-      <nav className="bg-white shadow-sm">
+    <div className="min-h-screen bg-[#F8F9FC]">
+      {/* Header */}
+      <div className="bg-white border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between h-16">
-            <div className="flex items-center">
-              <h1 className="text-xl font-semibold text-gray-900">Questioner Dashboard</h1>
+          <div className="flex justify-between items-center h-16">
+            <div className="flex items-center space-x-2">
+              <span className="font-bold text-2xl text-red-600">Jago</span>
+              <span className="font-bold text-2xl">CPNS</span>
             </div>
-            <div className="flex items-center">
-              <Button variant="ghost" onClick={handleLogout}>
-                <LogOut className="w-4 h-4 mr-2" />
-                Logout
-              </Button>
-            </div>
+            <Button
+              variant="ghost"
+              onClick={handleLogout}
+              className="text-red-600 hover:text-red-700"
+            >
+              <LogOut className="w-4 h-4 mr-2" />
+              Keluar
+            </Button>
           </div>
         </div>
-      </nav>
+      </div>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="bg-white rounded-lg shadow p-6">
-          <div className="flex justify-between items-center mb-6">
-            <div>
-              <h2 className="text-lg font-medium">Daftar Tryout</h2>
-              <p className="text-sm text-gray-500 mt-1">
-                Pilih tryout untuk mengelola soal-soal
-              </p>
-            </div>
-            <div className="flex items-center space-x-4">
-              <Select
-                value={selectedTryoutList.toString()}
-                onValueChange={(value) => {
-                  setSelectedTryoutList(Number(value));
-                }}
-              >
-                <SelectTrigger className="w-[200px]">
-                  <SelectValue placeholder="Pilih Tryout" />
-                </SelectTrigger>
-                <SelectContent>
-                  {tryoutLists.map((tryout) => (
-                    <SelectItem key={tryout.id} value={tryout.id.toString()}>
-                      {tryout.title}
-                    </SelectItem>
+      {/* Main Content */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="bg-white rounded-xl shadow-sm p-6">
+          <h1 className="text-2xl font-bold text-gray-900 mb-6">
+            Kelola Soal Tryout
+          </h1>
+
+          {/* Pilih Tryout */}
+          <div className="mb-8">
+            <Label>Pilih Tryout</Label>
+            <Select 
+              value={selectedTryoutList.toString()} 
+              onValueChange={(value) => setSelectedTryoutList(Number(value))}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Pilih tryout untuk dikelola" />
+              </SelectTrigger>
+              <SelectContent>
+                {tryoutLists.map(tryout => (
+                  <SelectItem key={tryout.id} value={tryout.id.toString()}>
+                    {tryout.title} - Batch {tryout.batch}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {selectedTryoutList > 0 && (
+            <div className="flex gap-6">
+              {/* Sidebar dengan Nomor Soal */}
+              <div className="w-48 shrink-0">
+                <h2 className="text-sm font-semibold text-gray-900 mb-3">Nomor Soal</h2>
+                <div className="grid grid-cols-3 gap-1.5">
+                  {tryouts.map((tryout) => (
+                    <button
+                      key={tryout.id}
+                      onClick={() => {
+                        setFormData(tryout);
+                        if (tryout.imageUrl) {
+                          setImagePreview(tryout.imageUrl);
+                        }
+                      }}
+                      className={`h-10 rounded flex items-center justify-center font-medium text-sm transition-colors
+                        ${tryout.id === formData.id 
+                          ? 'bg-red-600 text-white' 
+                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+                    >
+                      {tryout.number}
+                    </button>
                   ))}
-                </SelectContent>
-              </Select>
+                </div>
+              </div>
 
-              <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-                <DialogTrigger asChild>
-                  <Button onClick={() => {
-                    resetForm();
-                    setIsDialogOpen(true);
-                  }}>
-                    <Plus className="w-4 h-4 mr-2" />
-                    Tambah Soal
-                  </Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>
-                      {formData.id ? 'Edit Soal' : 'Tambah Soal Baru'}
-                    </DialogTitle>
-                  </DialogHeader>
-                  <form onSubmit={handleSubmit} className="space-y-4">
-                    {/* Form fields */}
-                    <div className="space-y-2">
-                      <Label htmlFor="question">Pertanyaan</Label>
-                      <Textarea
-                        id="question"
-                        value={formData.question}
-                        onChange={(e) => setFormData({ ...formData, question: e.target.value })}
-                        required
-                      />
-                    </div>
+              {/* Form dan Preview */}
+              <div className="flex-1 space-y-6">
+                {/* Form Pembuatan Soal */}
+                <div className="space-y-6">
+                  <div className="space-y-2">
+                    <Label>Pertanyaan</Label>
+                    <Textarea
+                      placeholder="Masukkan pertanyaan..."
+                      value={formData.question}
+                      onChange={(e) => setFormData({...formData, question: e.target.value})}
+                      className="min-h-[100px]"
+                    />
+                  </div>
 
-                    <div className="space-y-2">
-                      <Label htmlFor="explanation">Penjelasan</Label>
-                      <Textarea
-                        id="explanation"
-                        value={formData.explanation}
-                        onChange={(e) => setFormData({ ...formData, explanation: e.target.value })}
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="image">Gambar (opsional)</Label>
+                  {/* Image Upload Section */}
+                  <div className="space-y-2">
+                    <Label>Gambar (Opsional)</Label>
+                    <div className="flex items-center space-x-4">
                       <Input
-                        id="image"
                         type="file"
                         accept="image/*"
                         onChange={handleImageChange}
+                        className="hidden"
+                        id="image-upload"
                       />
+                      <Label
+                        htmlFor="image-upload"
+                        className="cursor-pointer flex items-center justify-center px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50"
+                      >
+                        <ImageIcon className="w-5 h-5 mr-2" />
+                        Pilih Gambar
+                      </Label>
                       {(imagePreview || formData.imageUrl) && (
-                        <div className="mt-2">
-                          <img
-                            src={imagePreview || formData.imageUrl}
-                            alt="Preview"
-                            className="max-w-full h-auto"
-                          />
-                        </div>
+                        <Button
+                          variant="ghost"
+                          onClick={() => {
+                            setSelectedImage(null);
+                            setImagePreview('');
+                            setFormData({ ...formData, imageUrl: undefined });
+                          }}
+                          className="text-red-600 hover:text-red-700"
+                        >
+                          <Trash className="w-4 h-4 mr-2" />
+                          Hapus Gambar
+                        </Button>
                       )}
                     </div>
+                    {(imagePreview || formData.imageUrl) && (
+                      <div className="mt-4">
+                        <img
+                          src={imagePreview || formData.imageUrl}
+                          alt="Preview"
+                          className="max-w-md rounded-lg shadow-sm"
+                        />
+                      </div>
+                    )}
+                  </div>
 
+                  {/* Pilihan Jawaban */}
+                  <div className="space-y-4">
+                    <Label>Pilihan Jawaban dan Kunci</Label>
                     <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="optionA">Opsi A</Label>
-                        <Input
-                          id="optionA"
-                          value={formData.optionA}
-                          onChange={(e) => setFormData({ ...formData, optionA: e.target.value })}
-                          required
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="optionB">Opsi B</Label>
-                        <Input
-                          id="optionB"
-                          value={formData.optionB}
-                          onChange={(e) => setFormData({ ...formData, optionB: e.target.value })}
-                          required
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="optionC">Opsi C</Label>
-                        <Input
-                          id="optionC"
-                          value={formData.optionC}
-                          onChange={(e) => setFormData({ ...formData, optionC: e.target.value })}
-                          required
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="optionD">Opsi D</Label>
-                        <Input
-                          id="optionD"
-                          value={formData.optionD}
-                          onChange={(e) => setFormData({ ...formData, optionD: e.target.value })}
-                          required
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="optionE">Opsi E</Label>
-                        <Input
-                          id="optionE"
-                          value={formData.optionE}
-                          onChange={(e) => setFormData({ ...formData, optionE: e.target.value })}
-                          required
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="correctAnswer">Jawaban Benar</Label>
-                        <Select
-                          value={formData.correctAnswer}
-                          onValueChange={(value) => setFormData({ ...formData, correctAnswer: value })}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Pilih jawaban" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="A">A</SelectItem>
-                            <SelectItem value="B">B</SelectItem>
-                            <SelectItem value="C">C</SelectItem>
-                            <SelectItem value="D">D</SelectItem>
-                            <SelectItem value="E">E</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="type">Tipe Soal</Label>
-                        <Select
-                          value={formData.type}
-                          onValueChange={(value) => setFormData({ ...formData, type: value as TestType })}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Pilih tipe" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value={TestType.TKD_BUMN}>TKD BUMN</SelectItem>
-                            <SelectItem value={TestType.AKHLAK_BUMN}>AKHLAK BUMN</SelectItem>
-                            <SelectItem value={TestType.TWK_BUMN}>TWK BUMN</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="subType">Sub Tipe</Label>
-                        <Select
-                          value={formData.subType}
-                          onValueChange={(value) => setFormData({ ...formData, subType: value as SubType })}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Pilih sub tipe" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {formData.type === TestType.TKD_BUMN && (
-                              <>
-                                <SelectItem value={SubType.verbal_logical_reasoning}>
-                                  Verbal & Logical Reasoning
-                                </SelectItem>
-                                <SelectItem value={SubType.number_sequence}>
-                                  Number Sequence
-                                </SelectItem>
-                                <SelectItem value={SubType.word_classification}>
-                                  Word Classification
-                                </SelectItem>
-                                <SelectItem value={SubType.diagram_reasoning}>
-                                  Diagram Reasoning
-                                </SelectItem>
-                              </>
-                            )}
-                            {formData.type === TestType.AKHLAK_BUMN && (
-                              <SelectItem value={SubType.penilaian_diri_akhlak}>
-                                Penilaian Diri AKHLAK
-                              </SelectItem>
-                            )}
-                            {formData.type === TestType.TWK_BUMN && (
-                              <SelectItem value={SubType.wawasan_kebangsaan}>
-                                Wawasan Kebangsaan
-                              </SelectItem>
-                            )}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-
-                    <div className="flex justify-end space-x-4">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={() => {
-                          resetForm();
-                          setIsDialogOpen(false);
-                        }}
-                      >
-                        Batal
-                      </Button>
-                      <Button type="submit" disabled={isSaving}>
-                        {isSaving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                        {formData.id ? 'Simpan Perubahan' : 'Tambah Soal'}
-                      </Button>
-                    </div>
-                  </form>
-                </DialogContent>
-              </Dialog>
-            </div>
-          </div>
-
-          {isLoading ? (
-            <div className="flex justify-center py-8">
-              <Loader2 className="w-6 h-6 animate-spin" />
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>No.</TableHead>
-                    <TableHead>Pertanyaan</TableHead>
-                    <TableHead>Tipe</TableHead>
-                    <TableHead>Sub Tipe</TableHead>
-                    <TableHead>Aksi</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {tryouts.map((tryout) => (
-                    <TableRow key={tryout.id}>
-                      <TableCell>{tryout.number}</TableCell>
-                      <TableCell>{tryout.question}</TableCell>
-                      <TableCell>{tryout.type}</TableCell>
-                      <TableCell>{tryout.subType}</TableCell>
-                      <TableCell>
-                        <div className="flex space-x-2">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => {
-                              setFormData(tryout);
-                              setIsDialogOpen(true);
-                            }}
-                          >
-                            <Save className="w-4 h-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={async () => {
-                              if (window.confirm('Apakah Anda yakin ingin menghapus soal ini?')) {
-                                try {
-                                  await api.delete(`/questioner/tryouts/${tryout.id}`);
-                                  toast.success('Soal berhasil dihapus');
-                                  fetchTryouts(selectedTryoutList);
-                                } catch (error) {
-                                  console.error('Error deleting tryout:', error);
-                                  toast.error('Gagal menghapus soal');
-                                }
-                              }
-                            }}
-                          >
-                            <Trash className="w-4 h-4" />
-                          </Button>
+                      {['A', 'B', 'C', 'D', 'E'].map((option) => (
+                        <div key={option}>
+                          <Label>Opsi {option}</Label>
+                          <div className="flex gap-2">
+                            <Input
+                              type="text"
+                              value={formData[`option${option}` as keyof Tryout] || ''}
+                              onChange={(e) => setFormData({
+                                ...formData,
+                                [`option${option}`]: e.target.value
+                              })}
+                            />
+                            <Button
+                              type="button"
+                              variant={formData.correctAnswer === option ? "default" : "outline"}
+                              onClick={() => setFormData({
+                                ...formData,
+                                correctAnswer: option
+                              })}
+                              className="w-20"
+                            >
+                              {formData.correctAnswer === option ? "Benar" : "Pilih"}
+                            </Button>
+                          </div>
                         </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Tipe Soal */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Tipe Soal</Label>
+                      <Select 
+                        value={formData.type}
+                        onValueChange={(value: TestType) => 
+                          setFormData({...formData, type: value})
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Pilih tipe soal" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value={TestType.TKD_BUMN}>TKD BUMN</SelectItem>
+                          <SelectItem value={TestType.AKHLAK_BUMN}>AKHLAK BUMN</SelectItem>
+                          <SelectItem value={TestType.TWK_BUMN}>TWK BUMN</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Sub Tipe</Label>
+                      <Select 
+                        value={formData.subType}
+                        onValueChange={(value: SubType) => 
+                          setFormData({...formData, subType: value})
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Pilih sub tipe soal" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {formData.type === TestType.TKD_BUMN && (
+                            <>
+                              <SelectItem value={SubType.verbal_logical_reasoning}>Verbal & Logical Reasoning</SelectItem>
+                              <SelectItem value={SubType.number_sequence}>Number Sequence</SelectItem>
+                              <SelectItem value={SubType.word_classification}>Word Classification</SelectItem>
+                              <SelectItem value={SubType.diagram_reasoning}>Diagram Reasoning</SelectItem>
+                            </>
+                          )}
+                          {formData.type === TestType.AKHLAK_BUMN && (
+                            <SelectItem value={SubType.penilaian_diri_akhlak}>Penilaian Diri AKHLAK</SelectItem>
+                          )}
+                          {formData.type === TestType.TWK_BUMN && (
+                            <SelectItem value={SubType.wawasan_kebangsaan}>Wawasan Kebangsaan</SelectItem>
+                          )}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+
+                  {/* Penjelasan Jawaban */}
+                  <div className="space-y-2">
+                    <Label>Penjelasan Jawaban</Label>
+                    <Textarea
+                      placeholder="Masukkan penjelasan jawaban..."
+                      value={formData.explanation}
+                      onChange={(e) => setFormData({...formData, explanation: e.target.value})}
+                      className="min-h-[100px]"
+                    />
+                  </div>
+
+                  {/* Submit dan Next Button */}
+                  <div className="flex gap-4">
+                    <Button 
+                      onClick={handleSubmit}
+                      className="flex-1"
+                      disabled={isLoading}
+                    >
+                      {isLoading ? (
+                        <>
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          Menyimpan...
+                        </>
+                      ) : formData.id ? (
+                        <>
+                          <Save className="w-4 h-4 mr-2" />
+                          Update Soal
+                        </>
+                      ) : (
+                        <>
+                          <Plus className="w-4 h-4 mr-2" />
+                          Tambah Soal
+                        </>
+                      )}
+                    </Button>
+                    
+                    <Button
+                      onClick={handleNextQuestion}
+                      variant="outline"
+                      className="w-[200px]"
+                      disabled={isLoading}
+                    >
+                      {formData.id ? (
+                        tryouts.findIndex(t => t.id === formData.id) < tryouts.length - 1 ? (
+                          "Soal Berikutnya"
+                        ) : (
+                          "Buat Soal Baru"
+                        )
+                      ) : (
+                        "Reset Form"
+                      )}
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Preview Soal */}
+                {formData.id ? (
+                  <div className="mt-8 border-t pt-8">
+                    <h2 className="text-xl font-semibold text-gray-900 mb-4">
+                      Preview Soal
+                    </h2>
+                    <div className="bg-gray-50 rounded-lg p-6">
+                      <div className="space-y-6">
+                        {/* Info soal */}
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center space-x-4">
+                            <div className="w-12 h-12 bg-blue-600 text-white rounded-lg flex items-center justify-center font-bold text-xl">
+                              {formData.number}
+                            </div>
+                            <div>
+                              <span className="font-medium text-gray-600">{formData.type}</span>
+                              <span className="mx-2 text-gray-400">•</span>
+                              <span className="text-gray-500">{formData.subType?.split('_').join(' ')}</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Pertanyaan */}
+                        <div className="space-y-4">
+                          <p className="text-gray-700">{formData.question}</p>
+                          {(imagePreview || formData.imageUrl) && (
+                            <img
+                              src={imagePreview || formData.imageUrl}
+                              alt="Question"
+                              className="max-w-lg rounded-lg shadow-sm"
+                            />
+                          )}
+                        </div>
+
+                        {/* Opsi jawaban */}
+                        <div className="grid grid-cols-1 gap-3">
+                          {['A', 'B', 'C', 'D', 'E'].map((option) => (
+                            <div
+                              key={option}
+                              className={`p-4 rounded-lg border ${
+                                formData.correctAnswer === option
+                                  ? 'border-green-500 bg-green-50'
+                                  : 'border-gray-200'
+                              }`}
+                            >
+                              <div className="flex items-center space-x-4">
+                                <div
+                                  className={`w-8 h-8 rounded-lg flex items-center justify-center text-sm font-medium ${
+                                    formData.correctAnswer === option
+                                      ? 'bg-green-500 text-white'
+                                      : 'bg-gray-100 text-gray-600'
+                                  }`}
+                                >
+                                  {option}
+                                </div>
+                                <span className={`${
+                                  formData.correctAnswer === option
+                                    ? 'text-green-700'
+                                    : 'text-gray-600'
+                                }`}>
+                                  {formData[`option${option}` as keyof Tryout]}
+                                </span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+
+                        {/* Penjelasan */}
+                        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                          <div className="flex items-center space-x-2 mb-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-yellow-600" viewBox="0 0 20 20" fill="currentColor">
+                              <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                            </svg>
+                            <h3 className="font-medium text-yellow-800">Penjelasan Jawaban</h3>
+                          </div>
+                          <div className="pl-7">
+                            <p className="text-yellow-800">{formData.explanation || 'Tidak ada penjelasan'}</p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ) : null}
+              </div>
             </div>
           )}
         </div>
-      </main>
+      </div>
     </div>
   );
 };
