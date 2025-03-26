@@ -1,89 +1,119 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuestionerAuth } from "@/contexts/QuestionerAuthContext";
-import { toast } from "react-hot-toast";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { AlertCircle, Loader2 } from "lucide-react";
 
 const QuestionerLogin = () => {
+  const navigate = useNavigate();
+  const { login } = useQuestionerAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [loading, setLoading] = useState(false);
-  const { login } = useQuestionerAuth();
-  const navigate = useNavigate();
+  const [error, setError] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError("");
+    setIsLoading(true);
     
-    if (!email || !password) {
-      toast.error("Email dan password harus diisi");
-      return;
-    }
-
-    setLoading(true);
+    console.log("Attempting questioner login...", { email });
+    
     try {
       const success = await login(email, password);
       
+      console.log("Login result:", success);
+      
       if (success) {
-        toast.success("Login berhasil");
-        navigate("/questioner/dashboard");
+        // Redirect ke dashboard questioner
+        console.log("Redirecting to questioner dashboard");
+        navigate('/questioner/dashboard');
       } else {
-        toast.error("Login gagal. Periksa email dan password Anda");
+        console.error("Login failed");
+        setError("Email atau password tidak valid");
       }
     } catch (error) {
       console.error("Login error:", error);
-      toast.error("Terjadi kesalahan saat login");
+      setError("Terjadi kesalahan saat login");
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100">
-      <div className="max-w-md w-full p-6 bg-white rounded-lg shadow-md">
-        <h2 className="text-2xl font-bold text-center text-gray-900 mb-6">
-          Login Questioner
-        </h2>
-        
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-              Email
-            </label>
-            <input
+    <div className="min-h-screen flex items-center justify-center bg-[#F8F9FC] px-4">
+      <div className="w-full max-w-[400px] space-y-6">
+        <div className="text-center space-y-2">
+          <div className="flex items-center justify-center space-x-2">
+            <span className="font-bold text-2xl text-red-600">Jago</span>
+            <span className="font-bold text-2xl">CPNS</span>
+          </div>
+          <h1 className="text-2xl font-bold text-gray-900">Login Questioner</h1>
+          <p className="text-gray-600">
+            Masuk sebagai pembuat soal CBT BUMN
+          </p>
+        </div>
+
+        {error && (
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
+
+        <form onSubmit={handleLogin} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="email">Email</Label>
+            <Input
               id="email"
               type="email"
+              placeholder="Masukkan email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-              placeholder="Masukkan email"
               required
             />
           </div>
 
-          <div>
-            <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-              Password
-            </label>
-            <input
+          <div className="space-y-2">
+            <Label htmlFor="password">Password</Label>
+            <Input
               id="password"
               type="password"
+              placeholder="Masukkan password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-              placeholder="Masukkan password"
               required
             />
           </div>
 
-          <button
-            type="submit"
-            disabled={loading}
-            className={`w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 ${
-              loading ? "opacity-50 cursor-not-allowed" : ""
-            }`}
+          <Button 
+            type="submit" 
+            className="w-full bg-red-600 hover:bg-red-700"
+            disabled={isLoading}
           >
-            {loading ? "Memproses..." : "Login"}
-          </button>
+            {isLoading ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Memproses...
+              </>
+            ) : (
+              "Masuk"
+            )}
+          </Button>
         </form>
+
+        <div className="text-center text-sm text-gray-600">
+          Kembali ke{" "}
+          <button
+            onClick={() => navigate("/")}
+            className="text-red-600 hover:text-red-700 font-medium"
+          >
+            Halaman Utama
+          </button>
+        </div>
       </div>
     </div>
   );
