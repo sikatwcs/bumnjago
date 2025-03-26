@@ -1,7 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { useNavigate } from 'react-router-dom';
 import api from '@/lib/api';
-import { toast } from '@/components/ui/use-toast';
 
 interface Questioner {
   id?: number;
@@ -23,7 +21,6 @@ const QuestionerAuthContext = createContext<QuestionerAuthContextType | undefine
 export const QuestionerAuthProvider = ({ children }: { children: ReactNode }) => {
   const [questioner, setQuestioner] = useState<Questioner | null>(null);
   const [loading, setLoading] = useState(true);
-  const navigate = useNavigate();
 
   // Memeriksa autentikasi questioner ketika aplikasi dimuat
   useEffect(() => {
@@ -110,23 +107,10 @@ export const QuestionerAuthProvider = ({ children }: { children: ReactNode }) =>
         email: questionerData.email,
         role: 'questioner'
       });
-
-      toast({
-        title: "Login berhasil",
-        description: "Selamat datang kembali!"
-      });
       
-      navigate('/questioner/dashboard');
       return true;
-    } catch (error: any) {
+    } catch (error) {
       console.error('Questioner login error:', error);
-      
-      toast({
-        variant: "destructive",
-        title: "Login gagal",
-        description: error.response?.data?.message || "Terjadi kesalahan saat login"
-      });
-      
       return false;
     }
   };
@@ -137,13 +121,6 @@ export const QuestionerAuthProvider = ({ children }: { children: ReactNode }) =>
     
     // Reset state
     setQuestioner(null);
-    
-    toast({
-      title: "Logout berhasil",
-      description: "Sampai jumpa kembali!"
-    });
-    
-    navigate('/questioner/login');
   };
 
   return (

@@ -1,11 +1,6 @@
 import axios from 'axios';
 
-// Gunakan base URL yang konsisten
-const baseURL = 'https://api.jagobumn.com/api';
-
-console.log('=== Questioner API Configuration ===');
-console.log('Base URL:', baseURL);
-console.log('============================');
+const baseURL = import.meta.env.VITE_API_URL || 'https://api.jagobumn.com/api';
 
 const api = axios.create({
   baseURL,
@@ -18,18 +13,19 @@ const api = axios.create({
 // Request interceptor
 api.interceptors.request.use(
   (config) => {
+    const url = config.url?.toLowerCase() || '';
+    
+    // Log untuk debugging
+    console.log('Using questioner token for endpoint:', config.url);
+    
+    // Selalu gunakan questioner token untuk semua request
     const token = localStorage.getItem('questioner-token');
-    
-    console.log('Questioner API Request:', {
-      url: config.url,
-      method: config.method,
-      baseURL: config.baseURL,
-      token: token ? 'present' : 'not present'
-    });
-    
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+
+    // Log request details
+    console.log('Sending request to:', `${config.baseURL}${config.url}`);
     
     return config;
   },
@@ -42,21 +38,23 @@ api.interceptors.request.use(
 // Response interceptor
 api.interceptors.response.use(
   (response) => {
-    console.log('Response success:', {
-      url: response.config.url,
-      status: response.status
+    console.log('Response received:', {
+      endpoint: response.config.url,
+      status: response.status,
+      data: response.data
     });
     return response;
   },
   (error) => {
     console.error('Response error:', {
-      url: error.config?.url,
+      endpoint: error.config?.url,
       status: error.response?.status,
-      message: error.message
+      message: error.message,
+      data: error.response?.data
     });
 
-    // Hanya redirect jika benar-benar unauthorized
-    if (error.response?.status === 401 && window.location.pathname !== '/questioner/login') {
+    // Handle unauthorized access
+    if (error.response?.status === 401) {
       localStorage.removeItem('questioner-token');
       window.location.href = '/questioner/login';
     }
