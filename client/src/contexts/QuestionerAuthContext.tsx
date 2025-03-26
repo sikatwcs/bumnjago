@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import api from '@/lib/api';
+import { questionerAPI } from '@/lib/api';
 
 interface Questioner {
   id?: number;
@@ -33,13 +33,9 @@ export const QuestionerAuthProvider = ({ children }: { children: ReactNode }) =>
       }
       
       try {
-        const response = await api.get('/questioner/profile', {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        });
-        
+        const response = await questionerAPI.getProfile();
         const questionerData = response.data;
+        
         setQuestioner({
           id: questionerData.id,
           name: questionerData.name,
@@ -48,7 +44,6 @@ export const QuestionerAuthProvider = ({ children }: { children: ReactNode }) =>
         });
       } catch (error) {
         console.error('Questioner auth check error:', error);
-        // Token tidak valid, hapus dari localStorage
         localStorage.removeItem('questioner-token');
       } finally {
         setLoading(false);
@@ -66,13 +61,9 @@ export const QuestionerAuthProvider = ({ children }: { children: ReactNode }) =>
     }
     
     try {
-      const response = await api.get('/questioner/profile', {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      });
-      
+      const response = await questionerAPI.getProfile();
       const questionerData = response.data;
+      
       setQuestioner({
         id: questionerData.id,
         name: questionerData.name,
@@ -88,19 +79,13 @@ export const QuestionerAuthProvider = ({ children }: { children: ReactNode }) =>
     try {
       console.log('Attempting questioner login with:', { email });
       
-      const response = await api.post('/questioner/login', {
-        email,
-        password
-      });
-      
+      const response = await questionerAPI.login(email, password);
       console.log('Questioner login response:', response.data);
       
       const { token, questioner: questionerData } = response.data;
       
-      // Set token 
       localStorage.setItem('questioner-token', token);
       
-      // Set questioner state
       setQuestioner({
         id: questionerData.id,
         name: questionerData.name,
@@ -116,10 +101,7 @@ export const QuestionerAuthProvider = ({ children }: { children: ReactNode }) =>
   };
 
   const logout = () => {
-    // Hapus token dari localStorage
     localStorage.removeItem('questioner-token');
-    
-    // Reset state
     setQuestioner(null);
   };
 
