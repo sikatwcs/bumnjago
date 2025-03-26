@@ -134,8 +134,23 @@ const QuestionerDashboard = () => {
         questionerAPI.getProfile()
       ]);
 
-      setTryoutLists(tryoutResponse.data);
-      setProfile(profileResponse.data);
+      console.log('Tryout response:', tryoutResponse.data);
+      console.log('Profile response:', profileResponse.data);
+
+      // Pastikan data yang diterima adalah array dan object
+      if (Array.isArray(tryoutResponse.data)) {
+        setTryoutLists(tryoutResponse.data);
+      } else {
+        console.error('Tryout lists data is not an array:', tryoutResponse.data);
+        toast.error('Format data tryout tidak valid');
+      }
+
+      if (typeof profileResponse.data === 'object' && profileResponse.data !== null) {
+        setProfile(profileResponse.data);
+      } else {
+        console.error('Profile data is not an object:', profileResponse.data);
+        toast.error('Format data profile tidak valid');
+      }
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
       toast.error('Gagal memuat data dashboard');
@@ -147,8 +162,16 @@ const QuestionerDashboard = () => {
   const fetchTryouts = async (tryoutListId: number) => {
     try {
       setIsLoading(true);
-      const response = await api.get(`/questioner/tryouts/${tryoutListId}`);
-      setTryouts(response.data);
+      const response = await questionerAPI.getTryoutDetails(tryoutListId);
+      
+      console.log('Tryouts response:', response.data);
+      
+      if (Array.isArray(response.data)) {
+        setTryouts(response.data);
+      } else {
+        console.error('Tryouts data is not an array:', response.data);
+        toast.error('Format data soal tidak valid');
+      }
     } catch (error) {
       console.error('Error fetching tryouts:', error);
       toast.error("Gagal memuat soal-soal");

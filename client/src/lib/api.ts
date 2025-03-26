@@ -123,22 +123,22 @@ export const adminAPI = {
 // Questioner API calls
 export const questionerAPI = {
   login: async (email: string, password: string) => {
-    return api.post('/questioner/login', { email, password });
+    return api.post('/api/questioner/login', { email, password });
   },
   getProfile: async () => {
-    return api.get('/questioner/profile');
+    return api.get('/api/questioner/profile');
   },
   getTryoutLists: async () => {
-    return api.get('/questioner/tryoutlists');
+    return api.get('/api/questioner/tryoutlists');
   },
   getTryoutDetails: async (id: number) => {
-    return api.get(`/questioner/tryouts/${id}`);
+    return api.get(`/api/questioner/tryouts/${id}`);
   },
   createQuestion: async (data: any) => {
-    return api.post('/questioner/tryouts', data);
+    return api.post('/api/questioner/tryouts', data);
   },
   updateQuestion: async (id: number, data: any) => {
-    return api.put(`/questioner/tryouts/${id}`, data);
+    return api.put(`/api/questioner/tryouts/${id}`, data);
   }
 };
 
