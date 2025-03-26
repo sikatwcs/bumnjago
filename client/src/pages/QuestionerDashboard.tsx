@@ -122,7 +122,10 @@ const QuestionerDashboard = () => {
 
   const fetchTryoutLists = async () => {
     try {
+      console.log('Fetching tryout lists...');
+      console.log('Token:', localStorage.getItem('questioner-token'));
       const response = await api.get('/questioner/tryoutlists');
+      console.log('Tryout lists response:', response.data);
       setTryoutLists(response.data);
     } catch (error) {
       console.error('Error fetching tryout lists:', error);

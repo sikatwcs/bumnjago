@@ -23,7 +23,24 @@ const api = axios.create({
 // Add request interceptor for debugging
 api.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('token') || localStorage.getItem('questioner-token');
+    // Get appropriate token based on URL
+    let token;
+    
+    // Jika URL berkaitan dengan admin, gunakan token admin
+    if (config.url?.startsWith('/admin')) {
+      token = localStorage.getItem('admin-token');
+      console.log('Using admin token for admin endpoint:', config.url);
+    } 
+    // Jika URL berkaitan dengan questioner, gunakan token questioner
+    else if (config.url?.startsWith('/questioner')) {
+      token = localStorage.getItem('questioner-token');
+      console.log('Using questioner token for questioner endpoint:', config.url);
+    }
+    // Untuk URL lainnya, gunakan token user biasa
+    else {
+      token = localStorage.getItem('token');
+    }
+    
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
