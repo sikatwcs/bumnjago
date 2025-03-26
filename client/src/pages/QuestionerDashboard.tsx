@@ -15,7 +15,6 @@ import { Label } from "@/components/ui/label";
 import { LogOut, Plus, Save, Trash, Image as ImageIcon, Loader2 } from "lucide-react";
 import api from "@/lib/api";
 import { toast } from "sonner";
-import { Link } from 'react-router-dom';
 
 interface Tryout {
   id: number;
@@ -57,15 +56,12 @@ enum SubType {
 interface TryoutList {
   id: number;
   title: string;
-  description: string;
+  price: string;
+  description?: string;
   batch: number;
-  type: string;
+  type: 'TKD_BUMN' | 'AKHLAK_BUMN' | 'TWK_BUMN';
   status: boolean;
   isOnline: boolean;
-  price: string;
-  imageUrl?: string;
-  createdAt: string;
-  updatedAt: string;
 }
 
 const QuestionerDashboard = () => {
@@ -130,7 +126,7 @@ const QuestionerDashboard = () => {
       const token = localStorage.getItem('questioner-token');
       console.log('Token questioner:', token);
       
-      const response = await api.get('/admin/tryoutlists');
+      const response = await api.get('/questioner/tryoutlists');
       console.log('Response dari API:', response.data);
       
       setTryoutLists(response.data);
