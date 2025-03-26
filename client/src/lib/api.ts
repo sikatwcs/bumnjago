@@ -8,7 +8,7 @@ interface ImportMeta {
 
 import axios from 'axios';
 
-const baseURL = `${import.meta.env.VITE_API_URL}/api`;
+const baseURL = import.meta.env.VITE_API_URL || 'https://api.jagobumn.com/api';
 console.log('Using API baseURL:', baseURL);
 
 const api = axios.create({

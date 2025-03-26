@@ -27,11 +27,15 @@ const upload = multer({
 // Get all tryout lists
 router.get('/tryoutlists', authenticateAdmin, async (req, res) => {
   try {
+    console.log('Mencoba mengambil semua tryout lists...');
+    
     const tryoutLists = await prisma.tryoutList.findMany({
       orderBy: {
         createdAt: 'desc'
       }
     });
+    
+    console.log('Jumlah tryout lists yang ditemukan:', tryoutLists.length);
     
     // Konversi BigInt price ke string untuk setiap tryout list
     const response = tryoutLists.map(tryout => ({
@@ -39,10 +43,15 @@ router.get('/tryoutlists', authenticateAdmin, async (req, res) => {
       price: tryout.price.toString()
     }));
     
+    console.log('Response yang akan dikirim:', response);
+    
     res.json(response);
   } catch (error) {
     console.error('Error fetching tryout lists:', error);
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ 
+      message: 'Server error',
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
   }
 });
 
