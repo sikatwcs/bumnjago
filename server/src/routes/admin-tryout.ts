@@ -24,25 +24,33 @@ const upload = multer({
   }
 });
 
-// Get all tryout lists
+// Get all tryout lists (untuk admin dan questioner)
 router.get('/tryoutlists', authenticateAdmin, async (req, res) => {
   try {
+    console.log('Mencoba mengambil tryout lists...');
+
+    // Ambil semua tryout list
     const tryoutLists = await prisma.tryoutList.findMany({
       orderBy: {
         createdAt: 'desc'
       }
     });
-    
+    console.log('Tryout lists yang ditemukan:', tryoutLists);
+
     // Konversi BigInt price ke string untuk setiap tryout list
     const response = tryoutLists.map(tryout => ({
       ...tryout,
       price: tryout.price.toString()
     }));
+    console.log('Response yang akan dikirim:', response);
     
     res.json(response);
   } catch (error) {
     console.error('Error fetching tryout lists:', error);
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ 
+      message: 'Server error', 
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
   }
 });
 
@@ -374,6 +382,27 @@ router.delete('/tryouts/:id', authenticateAdmin, async (req, res) => {
     res.json({ message: 'Soal berhasil dihapus' });
   } catch (error) {
     console.error('Error deleting tryout question:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Get tryout questions by tryout list ID
+router.get('/tryouts/:tryoutListId/questions', authenticateAdmin, async (req, res) => {
+  try {
+    const tryoutListId = parseInt(req.params.tryoutListId);
+
+    const tryouts = await prisma.tryout.findMany({
+      where: { 
+        tryoutListId: tryoutListId
+      },
+      orderBy: {
+        number: 'asc'
+      }
+    });
+
+    res.json(tryouts);
+  } catch (error) {
+    console.error('Error fetching tryout questions:', error);
     res.status(500).json({ message: 'Server error' });
   }
 });

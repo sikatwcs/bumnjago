@@ -123,10 +123,10 @@ const QuestionerDashboard = () => {
   const fetchTryoutLists = async () => {
     try {
       console.log('Memulai fetch tryout lists...');
-      const token = localStorage.getItem('questioner-token');
-      console.log('Token questioner:', token);
+      const token = localStorage.getItem('admin-token');
+      console.log('Token admin:', token);
       
-      const response = await api.get('/questioner/tryoutlists');
+      const response = await api.get('/admin/tryoutlists');
       console.log('Response dari API:', response.data);
       
       setTryoutLists(response.data);
