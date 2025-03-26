@@ -125,13 +125,20 @@ const QuestionerDashboard = () => {
       console.log('Memulai fetch tryout lists...');
       const token = localStorage.getItem('questioner-token');
       console.log('Token questioner:', token);
+      console.log('Base URL:', import.meta.env.VITE_API_URL);
       
       const response = await api.get('/questioner/tryoutlists');
       console.log('Response dari API:', response.data);
       
       setTryoutLists(response.data);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching tryout lists:', error);
+      console.error('Error details:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status,
+        config: error.config
+      });
       toast.error('Gagal memuat daftar tryout');
     }
   };
