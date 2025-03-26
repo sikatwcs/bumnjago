@@ -15,20 +15,16 @@ interface QuestionerAuthContextType {
   logout: () => void;
 }
 
-const QuestionerAuthContext = createContext<QuestionerAuthContextType>({
+const defaultContext: QuestionerAuthContextType = {
   isAuthenticated: false,
   questioner: null,
   login: async () => false,
   logout: () => {},
-});
-
-export const useQuestionerAuth = () => {
-  const context = useContext(QuestionerAuthContext);
-  if (!context) {
-    throw new Error('useQuestionerAuth must be used within a QuestionerAuthProvider');
-  }
-  return context;
 };
+
+const QuestionerAuthContext = createContext<QuestionerAuthContextType>(defaultContext);
+
+export const useQuestionerAuth = () => useContext(QuestionerAuthContext);
 
 interface QuestionerAuthProviderProps {
   children: ReactNode;
@@ -48,7 +44,12 @@ export const QuestionerAuthProvider = ({ children }: QuestionerAuthProviderProps
 
   const checkAuth = async () => {
     try {
-      const response = await api.get('/questioner/profile');
+      const token = localStorage.getItem('questioner-token');
+      if (!token) {
+        throw new Error('No token found');
+      }
+
+      const response = await api.get('/api/questioner/profile');
       if (response.data) {
         setQuestioner(response.data);
         setIsAuthenticated(true);
@@ -70,11 +71,14 @@ export const QuestionerAuthProvider = ({ children }: QuestionerAuthProviderProps
 
       console.log('Questioner login response:', response.data);
 
-      if (response.data && response.data.token) {
+      if (response.data?.token) {
         localStorage.setItem('questioner-token', response.data.token);
-        setQuestioner(response.data.questioner);
-        setIsAuthenticated(true);
-        return true;
+        
+        if (response.data.questioner) {
+          setQuestioner(response.data.questioner);
+          setIsAuthenticated(true);
+          return true;
+        }
       }
 
       return false;
@@ -91,15 +95,15 @@ export const QuestionerAuthProvider = ({ children }: QuestionerAuthProviderProps
     navigate('/questioner/login');
   };
 
-  const value = {
-    isAuthenticated,
-    questioner,
-    login,
-    logout
-  };
-
   return (
-    <QuestionerAuthContext.Provider value={value}>
+    <QuestionerAuthContext.Provider 
+      value={{ 
+        isAuthenticated, 
+        questioner, 
+        login, 
+        logout 
+      }}
+    >
       {children}
     </QuestionerAuthContext.Provider>
   );
