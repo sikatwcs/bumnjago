@@ -1,9 +1,12 @@
 import axios from 'axios';
 
-const baseURL = import.meta.env.VITE_API_URL || 'https://api.jagobumn.com/api';
+const baseURL = import.meta.env.VITE_API_URL || 'https://api.jagobumn.com';
+console.log('=== Questioner API Configuration ===');
+console.log('Base URL:', baseURL);
+console.log('============================');
 
 const api = axios.create({
-  baseURL,
+  baseURL: `${baseURL}/api`,
   withCredentials: true,
   headers: {
     'Content-Type': 'application/json',
@@ -13,19 +16,18 @@ const api = axios.create({
 // Request interceptor
 api.interceptors.request.use(
   (config) => {
-    const url = config.url?.toLowerCase() || '';
-    
     // Log untuk debugging
-    console.log('Using questioner token for endpoint:', config.url);
+    console.log('Questioner API Request:', {
+      url: config.url,
+      method: config.method,
+      baseURL: config.baseURL
+    });
     
-    // Selalu gunakan questioner token untuk semua request
     const token = localStorage.getItem('questioner-token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
-
-    // Log request details
-    console.log('Sending request to:', `${config.baseURL}${config.url}`);
+    console.log('Token:', token);
     
     return config;
   },
@@ -38,8 +40,8 @@ api.interceptors.request.use(
 // Response interceptor
 api.interceptors.response.use(
   (response) => {
-    console.log('Response received:', {
-      endpoint: response.config.url,
+    console.log('Response success:', {
+      url: response.config.url,
       status: response.status,
       data: response.data
     });
@@ -47,13 +49,12 @@ api.interceptors.response.use(
   },
   (error) => {
     console.error('Response error:', {
-      endpoint: error.config?.url,
+      url: error.config?.url,
       status: error.response?.status,
       message: error.message,
       data: error.response?.data
     });
 
-    // Handle unauthorized access
     if (error.response?.status === 401) {
       localStorage.removeItem('questioner-token');
       window.location.href = '/questioner/login';

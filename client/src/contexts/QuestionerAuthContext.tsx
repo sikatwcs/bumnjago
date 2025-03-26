@@ -1,86 +1,59 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import api from '@/lib/api';
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import api from '../lib/questioner';
+import { toast } from 'react-hot-toast';
 
 interface Questioner {
-  id?: number;
+  id: number;
   name: string;
   email: string;
-  role: 'questioner';
 }
 
 interface QuestionerAuthContextType {
   questioner: Questioner | null;
-  loading: boolean;
+  isAuthenticated: boolean;
   login: (email: string, password: string) => Promise<boolean>;
   logout: () => void;
-  getProfile: () => Promise<void>;
 }
 
 const QuestionerAuthContext = createContext<QuestionerAuthContextType | undefined>(undefined);
 
-export const QuestionerAuthProvider = ({ children }: { children: ReactNode }) => {
-  const [questioner, setQuestioner] = useState<Questioner | null>(null);
-  const [loading, setLoading] = useState(true);
+export const useQuestionerAuth = () => {
+  const context = useContext(QuestionerAuthContext);
+  if (!context) {
+    throw new Error('useQuestionerAuth must be used within a QuestionerAuthProvider');
+  }
+  return context;
+};
 
-  // Memeriksa autentikasi questioner ketika aplikasi dimuat
+export const QuestionerAuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [questioner, setQuestioner] = useState<Questioner | null>(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const navigate = useNavigate();
+
   useEffect(() => {
-    const checkAuth = async () => {
-      const token = localStorage.getItem('questioner-token');
-      
-      if (!token) {
-        setLoading(false);
-        return;
-      }
-      
-      try {
-        const response = await api.get('/questioner/profile', {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        });
-        
-        const questionerData = response.data;
-        setQuestioner({
-          id: questionerData.id,
-          name: questionerData.name,
-          email: questionerData.email,
-          role: 'questioner'
-        });
-      } catch (error) {
-        console.error('Questioner auth check error:', error);
-        // Token tidak valid, hapus dari localStorage
-        localStorage.removeItem('questioner-token');
-      } finally {
-        setLoading(false);
-      }
-    };
-    
-    checkAuth();
+    const token = localStorage.getItem('questioner-token');
+    if (token) {
+      checkAuth();
+    }
   }, []);
 
-  const getProfile = async () => {
-    const token = localStorage.getItem('questioner-token');
-    
-    if (!token) {
-      return;
-    }
-    
+  const checkAuth = async () => {
     try {
-      const response = await api.get('/questioner/profile', {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      });
-      
-      const questionerData = response.data;
-      setQuestioner({
-        id: questionerData.id,
-        name: questionerData.name,
-        email: questionerData.email,
-        role: 'questioner'
-      });
+      const response = await api.get('/questioner/profile');
+      if (response.data && response.data.id) {
+        setQuestioner(response.data);
+        setIsAuthenticated(true);
+      } else {
+        setQuestioner(null);
+        setIsAuthenticated(false);
+        localStorage.removeItem('questioner-token');
+      }
     } catch (error) {
-      console.error('Questioner profile error:', error);
+      console.error('Error checking auth:', error);
+      setQuestioner(null);
+      setIsAuthenticated(false);
+      localStorage.removeItem('questioner-token');
     }
   };
 
@@ -88,62 +61,44 @@ export const QuestionerAuthProvider = ({ children }: { children: ReactNode }) =>
     try {
       console.log('Attempting questioner login with:', { email });
       
-      const response = await api.post('/questioner/login', {
-        email,
-        password
+      const response = await api.post('/questioner/login', { 
+        email, 
+        password 
       });
-      
-      console.log('Questioner login response:', response.data);
-      
-      const { token, questioner: questionerData } = response.data;
-      
-      // Set token 
-      localStorage.setItem('questioner-token', token);
-      
-      // Set questioner state
-      setQuestioner({
-        id: questionerData.id,
-        name: questionerData.name,
-        email: questionerData.email,
-        role: 'questioner'
-      });
-      
-      return true;
-    } catch (error) {
-      console.error('Questioner login error:', error);
+
+      console.log('Login response:', response.data);
+
+      if (response.data && response.data.token) {
+        localStorage.setItem('questioner-token', response.data.token);
+        setQuestioner(response.data.questioner);
+        setIsAuthenticated(true);
+        toast.success('Login berhasil!');
+        navigate('/questioner/dashboard');
+        return true;
+      } else {
+        console.error('Invalid login response:', response.data);
+        toast.error('Login gagal: Response tidak valid');
+        return false;
+      }
+    } catch (error: any) {
+      console.error('Login error:', error);
+      const errorMessage = error.response?.data?.message || 'Terjadi kesalahan saat login';
+      toast.error(errorMessage);
       return false;
     }
   };
 
   const logout = () => {
-    // Hapus token dari localStorage
     localStorage.removeItem('questioner-token');
-    
-    // Reset state
     setQuestioner(null);
+    setIsAuthenticated(false);
+    navigate('/questioner/login');
+    toast.success('Berhasil logout');
   };
 
   return (
-    <QuestionerAuthContext.Provider
-      value={{
-        questioner,
-        loading,
-        login,
-        logout,
-        getProfile
-      }}
-    >
+    <QuestionerAuthContext.Provider value={{ questioner, isAuthenticated, login, logout }}>
       {children}
     </QuestionerAuthContext.Provider>
   );
-};
-
-export const useQuestionerAuth = () => {
-  const context = useContext(QuestionerAuthContext);
-  
-  if (context === undefined) {
-    throw new Error('useQuestionerAuth must be used within a QuestionerAuthProvider');
-  }
-  
-  return context;
 }; 
