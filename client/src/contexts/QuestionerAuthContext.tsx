@@ -2,14 +2,25 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import api from '../lib/questioner';
 import { useNavigate } from 'react-router-dom';
 
+interface Questioner {
+  id: string;
+  email: string;
+  name: string;
+}
+
 interface QuestionerAuthContextType {
   isAuthenticated: boolean;
-  questioner: any;
+  questioner: Questioner | null;
   login: (email: string, password: string) => Promise<boolean>;
   logout: () => void;
 }
 
-const QuestionerAuthContext = createContext<QuestionerAuthContextType | undefined>(undefined);
+const QuestionerAuthContext = createContext<QuestionerAuthContextType>({
+  isAuthenticated: false,
+  questioner: null,
+  login: async () => false,
+  logout: () => {},
+});
 
 export const useQuestionerAuth = () => {
   const context = useContext(QuestionerAuthContext);
@@ -25,7 +36,7 @@ interface QuestionerAuthProviderProps {
 
 export const QuestionerAuthProvider = ({ children }: QuestionerAuthProviderProps) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [questioner, setQuestioner] = useState<any>(null);
+  const [questioner, setQuestioner] = useState<Questioner | null>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -80,8 +91,15 @@ export const QuestionerAuthProvider = ({ children }: QuestionerAuthProviderProps
     navigate('/questioner/login');
   };
 
+  const value = {
+    isAuthenticated,
+    questioner,
+    login,
+    logout
+  };
+
   return (
-    <QuestionerAuthContext.Provider value={{ isAuthenticated, questioner, login, logout }}>
+    <QuestionerAuthContext.Provider value={value}>
       {children}
     </QuestionerAuthContext.Provider>
   );
