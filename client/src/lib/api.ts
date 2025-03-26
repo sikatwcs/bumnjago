@@ -26,7 +26,8 @@ api.interceptors.request.use(
     const url = config.url?.toLowerCase() || '';
     let token;
 
-    console.log('URL request:', url);
+    // Log full URL yang akan dipanggil
+    console.log('Full URL:', `${config.baseURL}${config.url}`);
 
     if (url.includes('/admin/')) {
       token = localStorage.getItem('admin-token');

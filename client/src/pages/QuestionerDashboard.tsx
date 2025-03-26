@@ -126,7 +126,7 @@ const QuestionerDashboard = () => {
       const token = localStorage.getItem('questioner-token');
       console.log('Token questioner:', token);
       
-      const response = await api.get('/api/questioner/tryoutlists');
+      const response = await api.get('/questioner/tryoutlists');
       console.log('Response dari API:', response.data);
       
       setTryoutLists(response.data);
