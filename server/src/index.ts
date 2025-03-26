@@ -13,6 +13,8 @@ import authRouter from './routes/auth';
 import paymentRouter from './routes/payments';
 import questionerRouter from './routes/questioner';
 import adminTryoutRouter from './routes/admin-tryout';
+import adminRouter from './routes/admin';
+import tryoutRouter from './routes/tryout';
 
 // Initialize
 dotenv.config();
@@ -66,6 +68,8 @@ app.use('/api/auth', authRouter);
 app.use('/api/payments', paymentRouter);
 app.use('/api/questioner', questionerRouter);
 app.use('/api/admin-tryout', adminTryoutRouter);
+app.use('/api/admin', adminRouter);
+app.use('/api/tryout', tryoutRouter);
 
 // Root route untuk pengecekan server
 app.get('/', (req: express.Request, res: express.Response, next: express.NextFunction) => {

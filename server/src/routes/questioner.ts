@@ -212,4 +212,200 @@ router.post('/', async (req, res) => {
   }
 });
 
+// Get all tryouts for questioner
+router.get('/tryouts', authenticateQuestioner, async (req, res) => {
+  try {
+    const questionerId = req.user.id;
+
+    // Ambil semua tryout yang aktif
+    const tryouts = await prisma.tryoutList.findMany({
+      where: {
+        status: true
+      },
+      orderBy: {
+        createdAt: 'desc'
+      }
+    });
+
+    // Konversi BigInt price ke string untuk setiap tryout
+    const response = tryouts.map(tryout => ({
+      ...tryout,
+      price: tryout.price.toString()
+    }));
+
+    res.json(response);
+  } catch (error) {
+    console.error('Error fetching tryouts for questioner:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Get specific tryout detail with questions
+router.get('/tryouts/:id', authenticateQuestioner, async (req, res) => {
+  try {
+    const tryoutId = parseInt(req.params.id);
+    const questionerId = req.user.id;
+
+    const tryout = await prisma.tryoutList.findUnique({
+      where: {
+        id: tryoutId,
+        status: true
+      },
+      include: {
+        tryouts: true
+      }
+    });
+
+    if (!tryout) {
+      return res.status(404).json({ message: 'Tryout tidak ditemukan' });
+    }
+
+    // Konversi BigInt price ke string
+    const response = {
+      ...tryout,
+      price: tryout.price.toString()
+    };
+
+    res.json(response);
+  } catch (error) {
+    console.error('Error fetching tryout detail:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Get all tryout lists for questioner
+router.get('/tryoutlists', authenticateQuestioner, async (req, res) => {
+  try {
+    const questionerId = req.user.id;
+
+    // Ambil semua tryout list
+    const tryoutLists = await prisma.tryoutList.findMany({
+      orderBy: {
+        createdAt: 'desc'
+      }
+    });
+
+    // Konversi BigInt price ke string untuk setiap tryout
+    const response = tryoutLists.map(tryout => ({
+      ...tryout,
+      price: tryout.price.toString()
+    }));
+
+    res.json(response);
+  } catch (error) {
+    console.error('Error fetching tryout lists for questioner:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Get tryout questions by tryout list ID
+router.get('/tryouts/:tryoutListId', authenticateQuestioner, async (req, res) => {
+  try {
+    const tryoutListId = parseInt(req.params.tryoutListId);
+    const questionerId = req.user.id;
+
+    const tryouts = await prisma.tryout.findMany({
+      where: { 
+        tryoutListId: tryoutListId
+      },
+      orderBy: {
+        number: 'asc'
+      }
+    });
+
+    res.json(tryouts);
+  } catch (error) {
+    console.error('Error fetching tryout questions:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Create tryout question
+router.post('/tryouts', authenticateQuestioner, async (req, res) => {
+  try {
+    const {
+      tryoutListId,
+      number,
+      question,
+      explanation,
+      optionA,
+      optionB,
+      optionC,
+      optionD,
+      optionE,
+      correctAnswer,
+      type,
+      subType,
+      imageUrl
+    } = req.body;
+
+    const newTryout = await prisma.tryout.create({
+      data: {
+        tryoutListId: parseInt(tryoutListId),
+        number: parseInt(number),
+        question,
+        explanation,
+        optionA,
+        optionB,
+        optionC,
+        optionD,
+        optionE,
+        correctAnswer,
+        type,
+        subType,
+        imageUrl
+      }
+    });
+
+    res.status(201).json(newTryout);
+  } catch (error) {
+    console.error('Error creating tryout question:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Update tryout question
+router.put('/tryouts/:id', authenticateQuestioner, async (req, res) => {
+  try {
+    const tryoutId = parseInt(req.params.id);
+    const {
+      number,
+      question,
+      explanation,
+      optionA,
+      optionB,
+      optionC,
+      optionD,
+      optionE,
+      correctAnswer,
+      type,
+      subType,
+      imageUrl
+    } = req.body;
+
+    const updatedTryout = await prisma.tryout.update({
+      where: { id: tryoutId },
+      data: {
+        number: parseInt(number),
+        question,
+        explanation,
+        optionA,
+        optionB,
+        optionC,
+        optionD,
+        optionE,
+        correctAnswer,
+        type,
+        subType,
+        imageUrl
+      }
+    });
+
+    res.json(updatedTryout);
+  } catch (error) {
+    console.error('Error updating tryout question:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
 export default router;

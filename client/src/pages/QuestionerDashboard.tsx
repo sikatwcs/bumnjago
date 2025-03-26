@@ -110,7 +110,7 @@ const QuestionerDashboard = () => {
   const fetchTryouts = async (tryoutListId: number) => {
     try {
       setIsLoading(true);
-      const response = await api.get(`/admin-tryout/tryouts/${tryoutListId}`);
+      const response = await api.get(`/questioner/tryouts/${tryoutListId}`);
       setTryouts(response.data);
     } catch (error) {
       console.error('Error fetching tryouts:', error);
@@ -122,7 +122,7 @@ const QuestionerDashboard = () => {
 
   const fetchTryoutLists = async () => {
     try {
-      const response = await api.get('/admin-tryout/tryoutlists');
+      const response = await api.get('/questioner/tryoutlists');
       setTryoutLists(response.data);
     } catch (error) {
       console.error('Error fetching tryout lists:', error);
@@ -176,21 +176,14 @@ const QuestionerDashboard = () => {
         formDataToSend.append('image', selectedImage);
       }
 
-      // Set headers untuk multipart/form-data
-      const config = {
-        headers: {
-          'Content-Type': 'multipart/form-data'
-        }
-      };
-
       let response;
       if (!formData.id) {
         // Tambah soal baru
-        response = await api.post('/admin-tryout/tryouts', formDataToSend, config);
+        response = await api.post('/questioner/tryouts', formDataToSend);
         toast.success("Soal berhasil ditambahkan");
       } else {
         // Update soal yang ada
-        response = await api.put(`/admin-tryout/tryouts/${formData.id}`, formDataToSend, config);
+        response = await api.put(`/questioner/tryouts/${formData.id}`, formDataToSend);
         toast.success("Soal berhasil diperbarui");
       }
 
@@ -200,12 +193,31 @@ const QuestionerDashboard = () => {
           ...prev,
           imageUrl: response.data.imageUrl
         }));
-        setImagePreview(response.data.imageUrl);
       }
 
-      // Refresh data dan reset form
-      await fetchTryouts(selectedTryoutList);
-      resetForm();
+      // Reset form dan refresh data
+      setFormData({
+        id: 0,
+        tryoutListId: selectedTryoutList,
+        number: tryouts.length + 1,
+        question: '',
+        explanation: '',
+        imageUrl: '',
+        optionA: '',
+        optionB: '',
+        optionC: '',
+        optionD: '',
+        optionE: '',
+        correctAnswer: '',
+        type: TestType.TKD_BUMN,
+        subType: SubType.verbal_logical_reasoning
+      });
+      setSelectedImage(null);
+      setImagePreview('');
+      setIsModalOpen(false);
+      
+      // Refresh tryouts list
+      fetchTryouts(selectedTryoutList);
     } catch (error) {
       console.error('Error submitting tryout:', error);
       toast.error("Gagal menyimpan soal");

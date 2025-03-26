@@ -5,7 +5,7 @@ import { v4 as uuidv4 } from 'uuid';
 
 // Konfigurasi upload
 const uploadDir = process.env.UPLOAD_DIR || 'uploads';
-const uploadUrl = process.env.UPLOAD_URL || 'http://157.66.34.226:3000/uploads'; // Sesuaikan dengan IP VPS
+const uploadUrl = process.env.UPLOAD_URL || 'http://157.66.34.226/uploads'; // Sesuaikan dengan IP VPS
 
 // Pastikan direktori upload ada
 if (!fs.existsSync(uploadDir)) {
