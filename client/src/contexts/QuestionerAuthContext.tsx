@@ -16,7 +16,12 @@ interface QuestionerAuthContextType {
   logout: () => void;
 }
 
-const QuestionerAuthContext = createContext<QuestionerAuthContextType | undefined>(undefined);
+const QuestionerAuthContext = createContext<QuestionerAuthContextType>({
+  questioner: null,
+  isAuthenticated: false,
+  login: async () => false,
+  logout: () => {}
+});
 
 export const useQuestionerAuth = () => {
   const context = useContext(QuestionerAuthContext);
@@ -96,8 +101,15 @@ export const QuestionerAuthProvider: React.FC<{ children: React.ReactNode }> = (
     toast.success('Berhasil logout');
   };
 
+  const value = {
+    questioner,
+    isAuthenticated,
+    login,
+    logout
+  };
+
   return (
-    <QuestionerAuthContext.Provider value={{ questioner, isAuthenticated, login, logout }}>
+    <QuestionerAuthContext.Provider value={value}>
       {children}
     </QuestionerAuthContext.Provider>
   );

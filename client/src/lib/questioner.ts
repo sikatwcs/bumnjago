@@ -1,12 +1,14 @@
 import axios from 'axios';
 
-const baseURL = import.meta.env.VITE_API_URL || 'https://api.jagobumn.com';
+// Gunakan base URL yang konsisten
+const baseURL = 'https://api.jagobumn.com/api';
+
 console.log('=== Questioner API Configuration ===');
 console.log('Base URL:', baseURL);
 console.log('============================');
 
 const api = axios.create({
-  baseURL: `${baseURL}/api`,
+  baseURL,
   withCredentials: true,
   headers: {
     'Content-Type': 'application/json',
@@ -16,18 +18,18 @@ const api = axios.create({
 // Request interceptor
 api.interceptors.request.use(
   (config) => {
-    // Log untuk debugging
+    const token = localStorage.getItem('questioner-token');
+    
     console.log('Questioner API Request:', {
       url: config.url,
       method: config.method,
-      baseURL: config.baseURL
+      baseURL: config.baseURL,
+      token: token ? 'present' : 'not present'
     });
     
-    const token = localStorage.getItem('questioner-token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
-    console.log('Token:', token);
     
     return config;
   },
@@ -42,8 +44,7 @@ api.interceptors.response.use(
   (response) => {
     console.log('Response success:', {
       url: response.config.url,
-      status: response.status,
-      data: response.data
+      status: response.status
     });
     return response;
   },
@@ -51,11 +52,11 @@ api.interceptors.response.use(
     console.error('Response error:', {
       url: error.config?.url,
       status: error.response?.status,
-      message: error.message,
-      data: error.response?.data
+      message: error.message
     });
 
-    if (error.response?.status === 401) {
+    // Hanya redirect jika benar-benar unauthorized
+    if (error.response?.status === 401 && window.location.pathname !== '/questioner/login') {
       localStorage.removeItem('questioner-token');
       window.location.href = '/questioner/login';
     }
