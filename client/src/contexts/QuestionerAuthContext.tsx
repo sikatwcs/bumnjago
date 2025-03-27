@@ -56,20 +56,25 @@ export const QuestionerAuthProvider: React.FC<{ children: React.ReactNode }> = (
       
       console.log('Login response:', response.data);
 
-      if (!response.data || !response.data.success) {
-        throw new Error(response.data?.message || 'Login gagal');
+      if (!response.data.success) {
+        throw new Error(response.data.message || 'Login gagal');
       }
 
       const { token, user } = response.data.data;
-      
       if (!token || !user) {
-        throw new Error('Data login tidak valid');
+        throw new Error('Data login tidak lengkap');
       }
 
       localStorage.setItem('questioner_token', token);
-      setQuestioner(user);
+      setQuestioner({
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role
+      });
 
       console.log('Login successful, user:', user);
+
     } catch (error: any) {
       console.error('Login error details:', {
         message: error.message,
@@ -77,12 +82,12 @@ export const QuestionerAuthProvider: React.FC<{ children: React.ReactNode }> = (
         status: error.response?.status
       });
 
-      if (error.response?.data?.message) {
-        throw new Error(error.response.data.message);
-      } else if (error.message) {
-        throw new Error(error.message);
+      if (error.response) {
+        throw new Error(error.response.data.message || 'Terjadi kesalahan saat login');
+      } else if (error.request) {
+        throw new Error('Tidak dapat terhubung ke server');
       } else {
-        throw new Error('Terjadi kesalahan saat login');
+        throw new Error(error.message || 'Terjadi kesalahan saat login');
       }
     }
   };

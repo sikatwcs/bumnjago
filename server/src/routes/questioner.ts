@@ -98,13 +98,18 @@ router.post('/login', async (req, res) => {
       { expiresIn: '24h' }
     );
 
-    // Format response untuk kompatibilitas
+    // Format response dengan success flag
     const response = {
-      token,
-      questioner: {
-        id: questioner.id,
-        name: questioner.name,
-        email: questioner.email
+      success: true,
+      message: 'Login berhasil',
+      data: {
+        token,
+        user: {
+          id: questioner.id,
+          name: questioner.name,
+          email: questioner.email,
+          role: 'questioner'
+        }
       }
     };
 

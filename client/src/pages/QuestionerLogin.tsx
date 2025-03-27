@@ -30,24 +30,34 @@ const QuestionerLogin = () => {
 
     try {
       setIsLoading(true);
-      console.log('Submitting login form...', { email });
+      console.log('Submitting login form...');
       
       await login(email, password);
       
       console.log('Login successful, redirecting...');
       toast.success('Login berhasil');
       
-      // Tambahkan delay kecil sebelum redirect untuk memastikan state terupdate
+      // Beri waktu untuk toast muncul sebelum redirect
       setTimeout(() => {
         navigate('/questioner/dashboard');
-      }, 100);
+      }, 1000);
+
     } catch (error: any) {
       console.error('Login form error:', {
         message: error.message,
         error
       });
       
-      toast.error(error.message || 'Gagal masuk ke sistem');
+      // Tampilkan pesan error yang lebih spesifik
+      if (error.message.includes('tidak ditemukan')) {
+        toast.error('Akun tidak ditemukan');
+      } else if (error.message.includes('password salah')) {
+        toast.error('Password salah');
+      } else if (error.message.includes('terhubung')) {
+        toast.error('Tidak dapat terhubung ke server');
+      } else {
+        toast.error(error.message || 'Gagal masuk ke sistem');
+      }
     } finally {
       setIsLoading(false);
     }
