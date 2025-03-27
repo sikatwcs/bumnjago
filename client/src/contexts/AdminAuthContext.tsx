@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import api from '@/lib/supabase';
+import api from '@/lib/api';
 
 interface Admin {
   id?: number;

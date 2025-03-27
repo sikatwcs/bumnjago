@@ -50,77 +50,72 @@ const handleError = (error: unknown) => {
   return 'An unknown error occurred';
 };
 
-// Login route untuk questioner
+// Login endpoint
 router.post('/login', async (req, res) => {
   try {
     const { email, password } = req.body;
+    console.log('Login attempt:', { email });
 
-    console.log('Login attempt for questioner:', email);
-
+    // Validasi input
     if (!email || !password) {
-      return res.status(400).json({ 
+      return res.status(400).json({
         success: false,
-        message: 'Email dan password harus diisi' 
+        message: 'Email dan password harus diisi'
       });
     }
 
-    // Cek jika questioner ada
+    // Cari questioner berdasarkan email
     const questioner = await prisma.questioner.findUnique({
       where: { email }
     });
 
     if (!questioner) {
       console.log('Questioner not found:', email);
-      return res.status(404).json({ 
+      return res.status(404).json({
         success: false,
-        message: 'Email atau password salah' 
+        message: 'Akun tidak ditemukan'
       });
     }
 
     // Verifikasi password
-    const validPassword = await bcrypt.compare(password, questioner.password);
-    if (!validPassword) {
-      console.log('Invalid password for questioner:', email);
-      return res.status(401).json({ 
+    const isValidPassword = await bcrypt.compare(password, questioner.password);
+    if (!isValidPassword) {
+      console.log('Invalid password for:', email);
+      return res.status(401).json({
         success: false,
-        message: 'Email atau password salah' 
+        message: 'Email atau password salah'
       });
     }
 
-    // Buat token JWT
+    // Generate token
     const token = jwt.sign(
-      { 
-        id: questioner.id, 
-        email: questioner.email, 
-        role: 'questioner',
-        name: questioner.name 
+      {
+        id: questioner.id,
+        email: questioner.email,
+        role: 'questioner'
       },
       process.env.JWT_SECRET || 'your-secret-key',
       { expiresIn: '24h' }
     );
 
-    console.log('Login successful for questioner:', email);
-
-    // Kirim response dengan format yang konsisten
-    res.json({
-      success: true,
-      message: 'Login berhasil',
-      data: {
-        token,
-        user: {
-          id: questioner.id,
-          name: questioner.name,
-          email: questioner.email,
-          role: 'questioner'
-        }
+    // Format response untuk kompatibilitas
+    const response = {
+      token,
+      questioner: {
+        id: questioner.id,
+        name: questioner.name,
+        email: questioner.email
       }
-    });
-  } catch (error: unknown) {
-    console.error('Questioner login error:', error);
-    res.status(500).json({ 
+    };
+
+    console.log('Login successful:', { email });
+    res.json(response);
+
+  } catch (error) {
+    console.error('Login error:', error);
+    res.status(500).json({
       success: false,
-      message: 'Terjadi kesalahan server',
-      error: process.env.NODE_ENV === 'development' ? handleError(error) : undefined
+      message: 'Terjadi kesalahan saat login'
     });
   }
 });
