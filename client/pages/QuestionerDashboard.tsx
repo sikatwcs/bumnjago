@@ -1,1 +1,0 @@
-import { uploadImage, saveQuestion, getQuestions } from "@/lib/api";

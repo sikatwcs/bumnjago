@@ -30,7 +30,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { LogOut, Plus, Edit, Trash, Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import api from "@/lib/supabase";
+import api from "@/lib/api";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 
 interface TryoutList {

@@ -50,7 +50,7 @@ const FreeTryoutForm = () => {
 
       // Store tryout ID in localStorage (in real app, this would be in a database)
       const userTryouts = JSON.parse(localStorage.getItem('userTryouts') || '{}');
-      userTryouts[user?.id] = [...(userTryouts[user?.id] || []), tryoutId];
+      userTryouts[user?.id || ''] = [...(userTryouts[user?.id || ''] || []), tryoutId];
       localStorage.setItem('userTryouts', JSON.stringify(userTryouts));
 
       toast.success("Pendaftaran tryout gratis berhasil!");
