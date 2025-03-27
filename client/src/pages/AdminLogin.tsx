@@ -5,7 +5,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertCircle, Loader2 } from "lucide-react";
+import { AlertCircle, Loader2, Info } from "lucide-react";
+import axios from "axios";
+import api from "@/lib/api";
 
 const AdminLogin = () => {
   const navigate = useNavigate();
@@ -14,7 +16,29 @@ const AdminLogin = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [apiStatus, setApiStatus] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+
+  // Cek koneksi ke API server
+  const checkApiConnection = async () => {
+    setApiStatus("checking");
+    try {
+      const baseUrl = import.meta.env.VITE_API_URL || 'https://api.jagobumn.com';
+      console.log("Checking API connection to:", baseUrl);
+      
+      const response = await axios.get(`${baseUrl}/`, { timeout: 5000 });
+      console.log("API connection result:", response.data);
+      
+      if (response.status === 200) {
+        setApiStatus("connected");
+      } else {
+        setApiStatus("error");
+      }
+    } catch (error) {
+      console.error("API connection error:", error);
+      setApiStatus("error");
+    }
+  };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -24,6 +48,22 @@ const AdminLogin = () => {
     console.log("Attempting admin login...", { email });
     
     try {
+      if (!email || !password) {
+        setError("Email dan password harus diisi");
+        setIsLoading(false);
+        return;
+      }
+
+      // Coba login manual tanpa helper
+      try {
+        console.log("Trying direct API call to /admin/login");
+        // Mencoba panggil API secara langsung untuk troubleshooting
+        const directResponse = await api.post('/admin/login', { email, password });
+        console.log("Direct API response:", directResponse.data);
+      } catch (directError) {
+        console.error("Direct API call failed:", directError);
+      }
+
       const success = await login(email, password);
       
       console.log("Login result:", success);
@@ -39,9 +79,35 @@ const AdminLogin = () => {
         console.error("Login failed");
         setError("Email atau password tidak valid");
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Login error:", error);
-      setError("Terjadi kesalahan saat login");
+      
+      // Tampilkan pesan error yang lebih spesifik
+      if (axios.isAxiosError(error)) {
+        if (error.response) {
+          // Server responded with non-2xx
+          const statusCode = error.response.status;
+          const errorMessage = error.response.data?.message || "Error tidak diketahui";
+          
+          if (statusCode === 500) {
+            setError(`Server error (500): ${errorMessage}. Coba periksa koneksi server.`);
+          } else if (statusCode === 401) {
+            setError("Email atau password tidak valid");
+          } else if (statusCode === 404) {
+            setError("Endpoint login tidak ditemukan. Periksa konfigurasi API.");
+          } else {
+            setError(`Error ${statusCode}: ${errorMessage}`);
+          }
+        } else if (error.request) {
+          // No response received
+          setError("Tidak ada respon dari server. Periksa koneksi internet atau status server.");
+        } else {
+          // Error setting up request
+          setError(`Error saat menyiapkan permintaan: ${error.message}`);
+        }
+      } else {
+        setError("Terjadi kesalahan saat login. Silakan coba lagi.");
+      }
     } finally {
       setIsLoading(false);
     }
@@ -65,6 +131,16 @@ const AdminLogin = () => {
               <AlertDescription>{error}</AlertDescription>
             </Alert>
           )}
+          
+          {apiStatus === "error" && (
+            <Alert variant="destructive">
+              <Info className="h-4 w-4" />
+              <AlertDescription>
+                Tidak dapat terhubung ke server API. Periksa koneksi internet atau status server.
+              </AlertDescription>
+            </Alert>
+          )}
+          
           <div className="rounded-md shadow-sm space-y-4">
             <div>
               <Label htmlFor="email">Email</Label>
@@ -94,7 +170,7 @@ const AdminLogin = () => {
             </div>
           </div>
 
-          <div>
+          <div className="flex flex-col gap-2">
             <Button
               type="submit"
               className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
@@ -107,6 +183,23 @@ const AdminLogin = () => {
                 </>
               ) : (
                 "Login"
+              )}
+            </Button>
+            
+            <Button 
+              type="button" 
+              variant="outline"
+              onClick={checkApiConnection}
+              disabled={apiStatus === "checking"}
+              className="text-sm"
+            >
+              {apiStatus === "checking" ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Memeriksa koneksi...
+                </>
+              ) : (
+                "Cek Koneksi Server"
               )}
             </Button>
           </div>

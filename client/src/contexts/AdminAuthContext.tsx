@@ -88,6 +88,7 @@ export const AdminAuthProvider = ({ children }: { children: ReactNode }) => {
     try {
       console.log('Attempting admin login with:', { email });
       
+      // Menggunakan adminAPI helper
       const response = await api.post('/admin/login', {
         email,
         password
@@ -96,6 +97,11 @@ export const AdminAuthProvider = ({ children }: { children: ReactNode }) => {
       console.log('Admin login response:', response.data);
       
       const { token, admin: adminData } = response.data;
+      
+      if (!token || !adminData) {
+        console.error('Admin login failed: Invalid response format', response.data);
+        return false;
+      }
       
       // Set token 
       localStorage.setItem('admin-token', token);
@@ -109,8 +115,27 @@ export const AdminAuthProvider = ({ children }: { children: ReactNode }) => {
       });
       
       return true;
-    } catch (error) {
+    } catch (error: any) {
       console.error('Admin login error:', error);
+      
+      // Log detailed error info
+      if (error.response) {
+        // Server merespon dengan status code diluar range 2xx
+        console.error('Admin login server error:', {
+          data: error.response.data,
+          status: error.response.status,
+          headers: error.response.headers
+        });
+      } else if (error.request) {
+        // Request dibuat tapi tidak ada respon
+        console.error('Admin login no response:', error.request);
+      } else {
+        // Error pada setup request
+        console.error('Admin login request error:', error.message);
+      }
+      
+      // Bersihkan token jika ada
+      localStorage.removeItem('admin-token');
       return false;
     }
   };

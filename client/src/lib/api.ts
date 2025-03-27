@@ -25,9 +25,12 @@ api.interceptors.request.use(
     
     // Admin endpoints
     if (url.includes('/admin')) {
-      const adminToken = localStorage.getItem('admin-token');
-      if (adminToken) {
-        config.headers.Authorization = `Bearer ${adminToken}`;
+      // Jangan tambahkan header Authorization untuk login admin
+      if (!url.includes('/admin/login')) {
+        const adminToken = localStorage.getItem('admin-token');
+        if (adminToken) {
+          config.headers.Authorization = `Bearer ${adminToken}`;
+        }
       }
     } 
     // Questioner endpoints
@@ -45,11 +48,12 @@ api.interceptors.request.use(
       }
     }
 
-    // Log request in development
-    if (process.env.NODE_ENV === 'development') {
+    // Log request in development atau jika URL contains /admin/login
+    if (process.env.NODE_ENV === 'development' || url.includes('/admin/login')) {
       console.log('API Request:', {
         method: config.method,
         url: config.url,
+        baseURL: config.baseURL,
         data: config.data,
         headers: config.headers
       });
@@ -66,8 +70,10 @@ api.interceptors.request.use(
 // Response interceptor
 api.interceptors.response.use(
   (response) => {
-    // Log response in development
-    if (process.env.NODE_ENV === 'development') {
+    const url = response.config.url || '';
+    
+    // Log response in development atau jika URL contains /admin/login
+    if (process.env.NODE_ENV === 'development' || url.includes('/admin/login')) {
       console.log('API Response:', {
         status: response.status,
         url: response.config.url,
@@ -77,16 +83,21 @@ api.interceptors.response.use(
     return response;
   },
   (error) => {
-    // Log error details
-    console.error('API Error:', {
-      message: error.message,
-      response: error.response?.data,
-      status: error.response?.status,
-      url: error.config?.url
-    });
-
+    // Log error details dengan informasi lebih detail
     const url = error.config?.url || '';
     
+    console.error('API Error:', {
+      message: error.message,
+      url: url,
+      method: error.config?.method,
+      baseURL: error.config?.baseURL,
+      fullURL: error.config?.baseURL + url,
+      status: error.response?.status,
+      statusText: error.response?.statusText,
+      response: error.response?.data,
+      request: error.config?.data
+    });
+
     // Handle 401 Unauthorized berdasarkan tipe endpoint
     if (error.response?.status === 401) {
       if (url.includes('/admin')) {
@@ -112,7 +123,13 @@ api.interceptors.response.use(
 // Admin API calls
 export const adminAPI = {
   login: async (email: string, password: string) => {
-    return api.post('/admin/login', { email, password });
+    try {
+      console.log('Calling admin login with:', { email, password: '******' });
+      return await api.post('/admin/login', { email, password });
+    } catch (error) {
+      console.error('Admin login API call failed:', error);
+      throw error;
+    }
   },
   getProfile: async () => {
     return api.get('/admin/profile');
