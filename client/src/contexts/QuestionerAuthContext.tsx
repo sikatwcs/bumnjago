@@ -47,18 +47,43 @@ export const QuestionerAuthProvider: React.FC<{ children: React.ReactNode }> = (
 
   const login = async (email: string, password: string) => {
     try {
-      const response = await api.post('/api/questioner/login', { email, password });
+      console.log('Attempting login with:', { email });
       
-      if (response.data.success) {
-        const { token, user } = response.data.data;
-        localStorage.setItem('questioner_token', token);
-        setQuestioner(user);
-      } else {
-        throw new Error(response.data.message);
+      const response = await api.post('/api/questioner/login', { 
+        email, 
+        password 
+      });
+      
+      console.log('Login response:', response.data);
+
+      if (!response.data || !response.data.success) {
+        throw new Error(response.data?.message || 'Login gagal');
       }
+
+      const { token, user } = response.data.data;
+      
+      if (!token || !user) {
+        throw new Error('Data login tidak valid');
+      }
+
+      localStorage.setItem('questioner_token', token);
+      setQuestioner(user);
+
+      console.log('Login successful, user:', user);
     } catch (error: any) {
-      console.error('Login error:', error);
-      throw new Error(error.response?.data?.message || 'Login gagal');
+      console.error('Login error details:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status
+      });
+
+      if (error.response?.data?.message) {
+        throw new Error(error.response.data.message);
+      } else if (error.message) {
+        throw new Error(error.message);
+      } else {
+        throw new Error('Terjadi kesalahan saat login');
+      }
     }
   };
 

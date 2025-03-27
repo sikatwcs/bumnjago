@@ -8,40 +8,31 @@ interface ImportMeta {
 
 import axios from 'axios';
 
-const baseURL = import.meta.env.VITE_API_URL || 'https://api.jagobumn.com';
-console.log('Using API baseURL:', baseURL);
-
 const api = axios.create({
-  baseURL,
+  baseURL: import.meta.env.VITE_API_URL || 'https://api.jagobumn.com',
   withCredentials: true,
+  timeout: 30000,
   headers: {
     'Content-Type': 'application/json',
-  },
-  timeout: 30000, // Menambah timeout menjadi 30 detik
+  }
 });
 
 // Request interceptor
 api.interceptors.request.use(
   (config) => {
-    const url = config.url?.toLowerCase() || '';
-    let token;
-
-    // Determine which token to use based on URL
-    if (url.includes('/questioner/')) {
-      token = localStorage.getItem('questioner_token'); // Mengubah format token key
-      console.log('Using questioner token for:', url);
-    }
-
+    const token = localStorage.getItem('questioner_token');
+    
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
 
-    // Log request details in development
+    // Log request in development
     if (process.env.NODE_ENV === 'development') {
-      console.log('Request:', {
-        url: `${config.baseURL}${config.url}`,
+      console.log('API Request:', {
         method: config.method,
-        headers: config.headers,
+        url: config.url,
+        data: config.data,
+        headers: config.headers
       });
     }
 
@@ -56,23 +47,23 @@ api.interceptors.request.use(
 // Response interceptor
 api.interceptors.response.use(
   (response) => {
+    // Log response in development
     if (process.env.NODE_ENV === 'development') {
-      console.log('Response:', {
-        url: response.config.url,
+      console.log('API Response:', {
         status: response.status,
+        url: response.config.url,
         data: response.data
       });
     }
     return response;
   },
   (error) => {
-    // Log detailed error information
+    // Log error details
     console.error('API Error:', {
-      url: error.config?.url,
-      status: error.response?.status,
       message: error.message,
-      data: error.response?.data,
-      stack: error.stack
+      response: error.response?.data,
+      status: error.response?.status,
+      url: error.config?.url
     });
 
     // Handle 401 Unauthorized
