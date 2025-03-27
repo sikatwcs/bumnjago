@@ -20,10 +20,29 @@ const api = axios.create({
 // Request interceptor
 api.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('questioner_token');
+    // Cek token berdasarkan tipe endpoint
+    const url = config.url || '';
     
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
+    // Admin endpoints
+    if (url.includes('/admin')) {
+      const adminToken = localStorage.getItem('admin-token');
+      if (adminToken) {
+        config.headers.Authorization = `Bearer ${adminToken}`;
+      }
+    } 
+    // Questioner endpoints
+    else if (url.includes('/questioner')) {
+      const questionerToken = localStorage.getItem('questioner-token');
+      if (questionerToken) {
+        config.headers.Authorization = `Bearer ${questionerToken}`;
+      }
+    } 
+    // User/auth endpoints
+    else {
+      const userToken = localStorage.getItem('token');
+      if (userToken) {
+        config.headers.Authorization = `Bearer ${userToken}`;
+      }
     }
 
     // Log request in development
@@ -66,10 +85,22 @@ api.interceptors.response.use(
       url: error.config?.url
     });
 
-    // Handle 401 Unauthorized
+    const url = error.config?.url || '';
+    
+    // Handle 401 Unauthorized berdasarkan tipe endpoint
     if (error.response?.status === 401) {
-      localStorage.removeItem('questioner_token');
-      window.location.href = '/questioner/login';
+      if (url.includes('/admin')) {
+        localStorage.removeItem('admin-token');
+        window.location.href = '/admin/login';
+      } 
+      else if (url.includes('/questioner')) {
+        localStorage.removeItem('questioner-token');
+        window.location.href = '/questioner/login';
+      }
+      else {
+        localStorage.removeItem('token');
+        window.location.href = '/auth';
+      }
     }
 
     return Promise.reject(error);
@@ -86,39 +117,71 @@ export const adminAPI = {
   getProfile: async () => {
     return api.get('/admin/profile');
   },
+  getProfiles: async () => {
+    return api.get('/admin/profiles');
+  },
   getTryoutLists: async () => {
     return api.get('/admin-tryout/tryoutlists');
   },
   createTryout: async (data: any) => {
     return api.post('/admin-tryout/tryoutlists', data);
   },
-  updateTryout: async (id: number, data: any) => {
+  updateTryout: async (id: string, data: any) => {
     return api.put(`/admin-tryout/tryoutlists/${id}`, data);
   },
-  deleteTryout: async (id: number) => {
+  deleteTryout: async (id: string) => {
     return api.delete(`/admin-tryout/tryoutlists/${id}`);
+  },
+  // Tambah endpoint untuk manajemen soal tryout
+  getTryoutQuestions: async (tryoutId: string) => {
+    return api.get(`/admin-tryout/tryoutlists/${tryoutId}/questions`);
+  },
+  createTryoutQuestion: async (tryoutId: string, data: any) => {
+    return api.post(`/admin-tryout/tryoutlists/${tryoutId}/questions`, data);
+  },
+  updateTryoutQuestion: async (tryoutId: string, questionId: string, data: any) => {
+    return api.put(`/admin-tryout/tryoutlists/${tryoutId}/questions/${questionId}`, data);
+  },
+  deleteTryoutQuestion: async (tryoutId: string, questionId: string) => {
+    return api.delete(`/admin-tryout/tryoutlists/${tryoutId}/questions/${questionId}`);
+  },
+  // Endpoint untuk upload gambar
+  uploadImage: async (formData: FormData) => {
+    return api.post('/admin/upload', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    });
   }
 };
 
 // Questioner API calls
 export const questionerAPI = {
   login: async (email: string, password: string) => {
-    return api.post('/api/questioner/login', { email, password });
+    return api.post('/questioner/login', { email, password });
   },
   getProfile: async () => {
-    return api.get('/api/questioner/profile');
+    return api.get('/questioner/profile');
   },
-  getTryoutLists: async () => {
-    return api.get('/api/questioner/tryoutlists');
-  },
-  getTryoutDetails: async (id: number) => {
-    return api.get(`/api/questioner/tryouts/${id}`);
+  getQuestions: async () => {
+    return api.get('/questioner/questions');
   },
   createQuestion: async (data: any) => {
-    return api.post('/api/questioner/tryouts', data);
+    return api.post('/questioner/questions', data);
   },
-  updateQuestion: async (id: number, data: any) => {
-    return api.put(`/api/questioner/tryouts/${id}`, data);
+  updateQuestion: async (id: string, data: any) => {
+    return api.put(`/questioner/questions/${id}`, data);
+  },
+  deleteQuestion: async (id: string) => {
+    return api.delete(`/questioner/questions/${id}`);
+  },
+  // Upload gambar untuk soal
+  uploadImage: async (formData: FormData) => {
+    return api.post('/questioner/upload', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    });
   }
 };
 
@@ -135,6 +198,12 @@ export const userAPI = {
   },
   getAvailableTryouts: async () => {
     return api.get('/tryout/available');
+  },
+  getTryoutById: async (id: string) => {
+    return api.get(`/tryout/${id}`);
+  },
+  submitTryoutAnswers: async (tryoutId: string, answers: any) => {
+    return api.post(`/tryout/${tryoutId}/submit`, { answers });
   }
 };
 
