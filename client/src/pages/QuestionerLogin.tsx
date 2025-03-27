@@ -1,60 +1,53 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { toast } from "react-hot-toast";
-import { questionerAPI } from "../lib/api";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertCircle, Loader2 } from "lucide-react";
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useQuestionerAuth } from '@/contexts/QuestionerAuthContext';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Loader2 } from 'lucide-react';
+import { toast } from 'sonner';
 
 const QuestionerLogin = () => {
   const navigate = useNavigate();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
+  const { questioner, login } = useQuestionerAuth();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    if (questioner) {
+      navigate('/questioner/dashboard');
+    }
+  }, [questioner, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    if (!email || !password) {
+      toast.error('Email dan password harus diisi');
+      return;
+    }
+
     try {
-      setLoading(true);
-      const response = await questionerAPI.login(email, password);
-      
-      // Simpan token
-      localStorage.setItem("questioner-token", response.data.token);
-      
-      toast.success("Login berhasil");
-      navigate("/questioner/dashboard");
-    } catch (error) {
-      console.error("Login error:", error);
-      toast.error("Login gagal. Periksa email dan password Anda.");
+      setIsLoading(true);
+      await login(email, password);
+      toast.success('Login berhasil');
+      navigate('/questioner/dashboard');
+    } catch (error: any) {
+      console.error('Login error:', error);
+      toast.error(error.message || 'Login gagal');
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#F8F9FC] px-4">
-      <div className="w-full max-w-[400px] space-y-6">
-        <div className="text-center space-y-2">
-          <div className="flex items-center justify-center space-x-2">
-            <span className="font-bold text-2xl text-red-600">Jago</span>
-            <span className="font-bold text-2xl">CPNS</span>
-          </div>
-          <h1 className="text-2xl font-bold text-gray-900">Login Questioner</h1>
-          <p className="text-gray-600">
-            Masuk sebagai pembuat soal CBT BUMN
-          </p>
+    <div className="min-h-screen flex items-center justify-center bg-gray-100">
+      <div className="bg-white p-8 rounded-lg shadow-md w-full max-w-md">
+        <div className="text-center mb-8">
+          <h1 className="text-2xl font-bold mb-2">Login Questioner</h1>
+          <p className="text-gray-600">Masuk ke dashboard questioner</p>
         </div>
-
-        {error && (
-          <Alert variant="destructive">
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
@@ -65,7 +58,7 @@ const QuestionerLogin = () => {
               placeholder="Masukkan email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              required
+              disabled={isLoading}
             />
           </div>
 
@@ -77,35 +70,25 @@ const QuestionerLogin = () => {
               placeholder="Masukkan password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              required
+              disabled={isLoading}
             />
           </div>
 
-          <Button 
-            type="submit" 
-            className="w-full bg-red-600 hover:bg-red-700"
-            disabled={loading}
+          <Button
+            type="submit"
+            className="w-full"
+            disabled={isLoading}
           >
-            {loading ? (
+            {isLoading ? (
               <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                 Memproses...
               </>
             ) : (
-              "Masuk"
+              'Masuk'
             )}
           </Button>
         </form>
-
-        <div className="text-center text-sm text-gray-600">
-          Kembali ke{" "}
-          <button
-            onClick={() => navigate("/")}
-            className="text-red-600 hover:text-red-700 font-medium"
-          >
-            Halaman Utama
-          </button>
-        </div>
       </div>
     </div>
   );

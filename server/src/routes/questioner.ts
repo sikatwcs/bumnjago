@@ -55,40 +55,71 @@ router.post('/login', async (req, res) => {
   try {
     const { email, password } = req.body;
 
+    console.log('Login attempt for questioner:', email);
+
+    if (!email || !password) {
+      return res.status(400).json({ 
+        success: false,
+        message: 'Email dan password harus diisi' 
+      });
+    }
+
     // Cek jika questioner ada
     const questioner = await prisma.questioner.findUnique({
       where: { email }
     });
 
     if (!questioner) {
-      return res.status(404).json({ message: 'Questioner tidak ditemukan' });
+      console.log('Questioner not found:', email);
+      return res.status(404).json({ 
+        success: false,
+        message: 'Email atau password salah' 
+      });
     }
 
     // Verifikasi password
     const validPassword = await bcrypt.compare(password, questioner.password);
     if (!validPassword) {
-      return res.status(401).json({ message: 'Password salah' });
+      console.log('Invalid password for questioner:', email);
+      return res.status(401).json({ 
+        success: false,
+        message: 'Email atau password salah' 
+      });
     }
 
     // Buat token JWT
     const token = jwt.sign(
-      { id: questioner.id, email: questioner.email, role: 'questioner' },
+      { 
+        id: questioner.id, 
+        email: questioner.email, 
+        role: 'questioner',
+        name: questioner.name 
+      },
       process.env.JWT_SECRET || 'your-secret-key',
-      { expiresIn: '1d' }
+      { expiresIn: '24h' }
     );
 
+    console.log('Login successful for questioner:', email);
+
+    // Kirim response dengan format yang konsisten
     res.json({
-      token,
-      questioner: {
-        id: questioner.id,
-        name: questioner.name,
-        email: questioner.email
+      success: true,
+      message: 'Login berhasil',
+      data: {
+        token,
+        user: {
+          id: questioner.id,
+          name: questioner.name,
+          email: questioner.email,
+          role: 'questioner'
+        }
       }
     });
   } catch (error: unknown) {
     console.error('Questioner login error:', error);
     res.status(500).json({ 
-      message: 'Server error',
+      success: false,
+      message: 'Terjadi kesalahan server',
       error: process.env.NODE_ENV === 'development' ? handleError(error) : undefined
     });
   }

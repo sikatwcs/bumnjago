@@ -1,120 +1,74 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { questionerAPI } from '@/lib/api';
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import api from '@/lib/api';
 
 interface Questioner {
-  id?: number;
+  id: number;
   name: string;
   email: string;
-  role: 'questioner';
+  role: string;
 }
 
-interface QuestionerAuthContextType {
+interface AuthContextType {
   questioner: Questioner | null;
   loading: boolean;
-  login: (email: string, password: string) => Promise<boolean>;
+  login: (email: string, password: string) => Promise<void>;
   logout: () => void;
-  getProfile: () => Promise<void>;
 }
 
-const QuestionerAuthContext = createContext<QuestionerAuthContextType | undefined>(undefined);
+const QuestionerAuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export const QuestionerAuthProvider = ({ children }: { children: ReactNode }) => {
+export const QuestionerAuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [questioner, setQuestioner] = useState<Questioner | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Memeriksa autentikasi questioner ketika aplikasi dimuat
   useEffect(() => {
-    const checkAuth = async () => {
-      const token = localStorage.getItem('questioner-token');
-      
+    checkAuth();
+  }, []);
+
+  const checkAuth = async () => {
+    try {
+      const token = localStorage.getItem('questioner_token');
       if (!token) {
         setLoading(false);
         return;
       }
-      
-      try {
-        const response = await questionerAPI.getProfile();
-        const questionerData = response.data;
-        
-        setQuestioner({
-          id: questionerData.id,
-          name: questionerData.name,
-          email: questionerData.email,
-          role: 'questioner'
-        });
-      } catch (error) {
-        console.error('Questioner auth check error:', error);
-        localStorage.removeItem('questioner-token');
-      } finally {
-        setLoading(false);
-      }
-    };
-    
-    checkAuth();
-  }, []);
 
-  const getProfile = async () => {
-    const token = localStorage.getItem('questioner-token');
-    
-    if (!token) {
-      return;
-    }
-    
-    try {
-      const response = await questionerAPI.getProfile();
-      const questionerData = response.data;
-      
-      setQuestioner({
-        id: questionerData.id,
-        name: questionerData.name,
-        email: questionerData.email,
-        role: 'questioner'
-      });
+      const response = await api.get('/api/questioner/profile');
+      if (response.data) {
+        setQuestioner(response.data);
+      }
     } catch (error) {
-      console.error('Questioner profile error:', error);
+      console.error('Auth check failed:', error);
+      localStorage.removeItem('questioner_token');
+    } finally {
+      setLoading(false);
     }
   };
 
-  const login = async (email: string, password: string): Promise<boolean> => {
+  const login = async (email: string, password: string) => {
     try {
-      console.log('Attempting questioner login with:', { email });
+      const response = await api.post('/api/questioner/login', { email, password });
       
-      const response = await questionerAPI.login(email, password);
-      console.log('Questioner login response:', response.data);
-      
-      const { token, questioner: questionerData } = response.data;
-      
-      localStorage.setItem('questioner-token', token);
-      
-      setQuestioner({
-        id: questionerData.id,
-        name: questionerData.name,
-        email: questionerData.email,
-        role: 'questioner'
-      });
-      
-      return true;
-    } catch (error) {
-      console.error('Questioner login error:', error);
-      return false;
+      if (response.data.success) {
+        const { token, user } = response.data.data;
+        localStorage.setItem('questioner_token', token);
+        setQuestioner(user);
+      } else {
+        throw new Error(response.data.message);
+      }
+    } catch (error: any) {
+      console.error('Login error:', error);
+      throw new Error(error.response?.data?.message || 'Login gagal');
     }
   };
 
   const logout = () => {
-    localStorage.removeItem('questioner-token');
+    localStorage.removeItem('questioner_token');
     setQuestioner(null);
   };
 
   return (
-    <QuestionerAuthContext.Provider
-      value={{
-        questioner,
-        loading,
-        login,
-        logout,
-        getProfile
-      }}
-    >
+    <QuestionerAuthContext.Provider value={{ questioner, loading, login, logout }}>
       {children}
     </QuestionerAuthContext.Provider>
   );
@@ -122,10 +76,8 @@ export const QuestionerAuthProvider = ({ children }: { children: ReactNode }) =>
 
 export const useQuestionerAuth = () => {
   const context = useContext(QuestionerAuthContext);
-  
   if (context === undefined) {
     throw new Error('useQuestionerAuth must be used within a QuestionerAuthProvider');
   }
-  
   return context;
 }; 
