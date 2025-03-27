@@ -7,6 +7,49 @@ import { authenticateQuestioner } from '../middleware/auth';
 const router = express.Router();
 const prisma = new PrismaClient();
 
+// Enum untuk tipe test dan subtipe
+enum TestType {
+  TKD_BUMN = 'TKD_BUMN',
+  AKHLAK_BUMN = 'AKHLAK_BUMN',
+  TWK_BUMN = 'TWK_BUMN'
+}
+
+enum SubType {
+  // TKD BUMN
+  verbal_logical_reasoning = 'verbal_logical_reasoning',
+  number_sequence = 'number_sequence',
+  word_classification = 'word_classification',
+  diagram_reasoning = 'diagram_reasoning',
+  // AKHLAK BUMN
+  penilaian_diri_akhlak = 'penilaian_diri_akhlak',
+  // TWK BUMN
+  wawasan_kebangsaan = 'wawasan_kebangsaan'
+}
+
+// Mapping valid subtypes untuk setiap test type
+const VALID_SUBTYPES: Record<TestType, SubType[]> = {
+  [TestType.TKD_BUMN]: [
+    SubType.verbal_logical_reasoning,
+    SubType.number_sequence,
+    SubType.word_classification,
+    SubType.diagram_reasoning
+  ],
+  [TestType.AKHLAK_BUMN]: [
+    SubType.penilaian_diri_akhlak
+  ],
+  [TestType.TWK_BUMN]: [
+    SubType.wawasan_kebangsaan
+  ]
+};
+
+// Helper function untuk error handling
+const handleError = (error: unknown) => {
+  if (error instanceof Error) {
+    return error.message;
+  }
+  return 'An unknown error occurred';
+};
+
 // Login route untuk questioner
 router.post('/login', async (req, res) => {
   try {
@@ -42,9 +85,12 @@ router.post('/login', async (req, res) => {
         email: questioner.email
       }
     });
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Questioner login error:', error);
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ 
+      message: 'Server error',
+      error: process.env.NODE_ENV === 'development' ? handleError(error) : undefined
+    });
   }
 });
 
@@ -69,9 +115,12 @@ router.get('/profile', authenticateQuestioner, async (req, res) => {
     }
 
     res.json(questioner);
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Get questioner profile error:', error);
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ 
+      message: 'Server error',
+      error: process.env.NODE_ENV === 'development' ? handleError(error) : undefined
+    });
   }
 });
 
@@ -119,9 +168,12 @@ router.put('/profile', authenticateQuestioner, async (req, res) => {
     });
 
     res.json(updatedQuestioner);
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Update questioner profile error:', error);
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ 
+      message: 'Server error',
+      error: process.env.NODE_ENV === 'development' ? handleError(error) : undefined
+    });
   }
 });
 
@@ -161,9 +213,12 @@ router.put('/change-password', authenticateQuestioner, async (req, res) => {
     });
 
     res.json({ message: 'Password berhasil diubah' });
-  } catch (error) {
-    console.error('Change questioner password error:', error);
-    res.status(500).json({ message: 'Server error' });
+  } catch (error: unknown) {
+    console.error('Change password error:', error);
+    res.status(500).json({ 
+      message: 'Server error',
+      error: process.env.NODE_ENV === 'development' ? handleError(error) : undefined
+    });
   }
 });
 
@@ -206,9 +261,12 @@ router.post('/', async (req, res) => {
         createdAt: newQuestioner.createdAt
       }
     });
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Create questioner error:', error);
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ 
+      message: 'Server error',
+      error: process.env.NODE_ENV === 'development' ? handleError(error) : undefined
+    });
   }
 });
 
@@ -234,9 +292,12 @@ router.get('/tryouts', authenticateQuestioner, async (req, res) => {
     }));
 
     res.json(response);
-  } catch (error) {
-    console.error('Error fetching tryouts for questioner:', error);
-    res.status(500).json({ message: 'Server error' });
+  } catch (error: unknown) {
+    console.error('Error fetching tryouts:', error);
+    res.status(500).json({ 
+      message: 'Server error',
+      error: process.env.NODE_ENV === 'development' ? handleError(error) : undefined
+    });
   }
 });
 
@@ -267,9 +328,12 @@ router.get('/tryouts/:id', authenticateQuestioner, async (req, res) => {
     };
 
     res.json(response);
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Error fetching tryout detail:', error);
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ 
+      message: 'Server error',
+      error: process.env.NODE_ENV === 'development' ? handleError(error) : undefined
+    });
   }
 });
 
@@ -289,9 +353,12 @@ router.get('/tryoutlists', authenticateQuestioner, async (req, res) => {
 
     console.log('Found tryout lists:', tryoutLists.length);
     res.json(tryoutLists);
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Get tryout lists error:', error);
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ 
+      message: 'Server error',
+      error: process.env.NODE_ENV === 'development' ? handleError(error) : undefined
+    });
   }
 });
 
@@ -311,9 +378,12 @@ router.get('/tryouts/:tryoutListId', authenticateQuestioner, async (req, res) =>
     });
 
     res.json(tryouts);
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Error fetching tryout questions:', error);
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({ 
+      message: 'Server error',
+      error: process.env.NODE_ENV === 'development' ? handleError(error) : undefined
+    });
   }
 });
 
@@ -336,6 +406,18 @@ router.post('/tryouts', authenticateQuestioner, async (req, res) => {
       imageUrl
     } = req.body;
 
+    // Validasi tipe dan subtipe
+    if (!Object.values(TestType).includes(type as TestType)) {
+      return res.status(400).json({ message: 'Tipe test tidak valid' });
+    }
+
+    const testType = type as TestType;
+    const validSubTypes = VALID_SUBTYPES[testType];
+    
+    if (!validSubTypes.includes(subType as SubType)) {
+      return res.status(400).json({ message: 'Subtipe tidak valid untuk tipe test ini' });
+    }
+
     const newTryout = await prisma.tryout.create({
       data: {
         tryoutListId: parseInt(tryoutListId),
@@ -348,16 +430,27 @@ router.post('/tryouts', authenticateQuestioner, async (req, res) => {
         optionD,
         optionE,
         correctAnswer,
-        type,
-        subType,
+        type: testType,
+        subType: subType as SubType,
         imageUrl
       }
     });
 
     res.status(201).json(newTryout);
-  } catch (error) {
-    console.error('Error creating tryout question:', error);
-    res.status(500).json({ message: 'Server error' });
+  } catch (error: unknown) {
+    console.error('Create question error:', error);
+    
+    if (error instanceof Error) {
+      if (error.message.includes('tidak ditemukan') || 
+          error.message.includes('sudah digunakan')) {
+        return res.status(400).json({ message: error.message });
+      }
+    }
+
+    res.status(500).json({ 
+      message: 'Server error',
+      error: process.env.NODE_ENV === 'development' ? handleError(error) : undefined
+    });
   }
 });
 
@@ -365,43 +458,73 @@ router.post('/tryouts', authenticateQuestioner, async (req, res) => {
 router.put('/tryouts/:id', authenticateQuestioner, async (req, res) => {
   try {
     const tryoutId = parseInt(req.params.id);
-    const {
-      number,
-      question,
-      explanation,
-      optionA,
-      optionB,
-      optionC,
-      optionD,
-      optionE,
-      correctAnswer,
-      type,
-      subType,
-      imageUrl
-    } = req.body;
+    const updateData = req.body;
+
+    // Validasi tipe dan subtipe jika ada dalam updateData
+    if (updateData.type) {
+      const testType = updateData.type as TestType;
+      if (!Object.values(TestType).includes(testType)) {
+        return res.status(400).json({ message: 'Tipe test tidak valid' });
+      }
+
+      if (updateData.subType && !VALID_SUBTYPES[testType].includes(updateData.subType as SubType)) {
+        return res.status(400).json({ message: 'Subtipe tidak valid untuk tipe test ini' });
+      }
+    }
 
     const updatedTryout = await prisma.tryout.update({
       where: { id: tryoutId },
       data: {
-        number: parseInt(number),
-        question,
-        explanation,
-        optionA,
-        optionB,
-        optionC,
-        optionD,
-        optionE,
-        correctAnswer,
-        type,
-        subType,
-        imageUrl
+        ...updateData,
+        tryoutListId: updateData.tryoutListId ? parseInt(updateData.tryoutListId) : undefined,
+        number: updateData.number ? parseInt(updateData.number) : undefined,
+        type: updateData.type as TestType | undefined,
+        subType: updateData.subType as SubType | undefined
       }
     });
 
     res.json(updatedTryout);
-  } catch (error) {
-    console.error('Error updating tryout question:', error);
-    res.status(500).json({ message: 'Server error' });
+  } catch (error: unknown) {
+    console.error('Update question error:', error);
+    
+    if (error instanceof Error) {
+      if (error.message.includes('tidak ditemukan') || 
+          error.message.includes('sudah digunakan')) {
+        return res.status(400).json({ message: error.message });
+      }
+
+      if ('code' in error && (error as any).code === 'P2025') {
+        return res.status(404).json({ message: 'Soal tidak ditemukan' });
+      }
+    }
+
+    res.status(500).json({ 
+      message: 'Server error',
+      error: process.env.NODE_ENV === 'development' ? handleError(error) : undefined
+    });
+  }
+});
+
+// Delete tryout question
+router.delete('/tryouts/:id', authenticateQuestioner, async (req, res) => {
+  try {
+    const tryoutId = parseInt(req.params.id);
+    await prisma.tryout.delete({
+      where: { id: tryoutId }
+    });
+
+    res.json({ message: 'Soal berhasil dihapus' });
+  } catch (error: unknown) {
+    console.error('Delete question error:', error);
+    
+    if (error instanceof Error && 'code' in error && (error as any).code === 'P2025') {
+      return res.status(404).json({ message: 'Soal tidak ditemukan' });
+    }
+
+    res.status(500).json({ 
+      message: 'Server error',
+      error: process.env.NODE_ENV === 'development' ? handleError(error) : undefined
+    });
   }
 });
 

@@ -3,6 +3,9 @@ import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import path from 'path';
 import fs from 'fs';
+import morgan from 'morgan';
+import helmet from 'helmet';
+import compression from 'compression';
 
 // Import routes
 import authRouter from './routes/auth';
@@ -23,7 +26,11 @@ app.use(cors({
 }));
 
 // Middleware
+app.use(helmet());
+app.use(compression());
+app.use(morgan('dev'));
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
 // Konfigurasi cookie
@@ -64,9 +71,12 @@ app.get('/', (req: express.Request, res: express.Response) => {
 });
 
 // Error handling middleware
-app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
-  console.error('Error:', err);
-  res.status(500).json({ message: 'Internal server error', error: err.message });
+app.use((err: Error, req: express.Request, res: express.Response, next: express.NextFunction) => {
+  console.error(err.stack);
+  res.status(500).json({ 
+    message: 'Internal Server Error',
+    error: process.env.NODE_ENV === 'development' ? err.message : undefined
+  });
 });
 
 // 404 handler
