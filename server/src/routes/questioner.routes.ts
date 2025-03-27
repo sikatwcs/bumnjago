@@ -10,18 +10,22 @@ const prisma = new PrismaClient();
 router.post('/login', async (req, res) => {
   try {
     const { email, password } = req.body;
+    console.log('Login attempt for questioner:', { email });
     
     // Cari questioner berdasarkan email
     const questioner = await prisma.questioner.findUnique({
       where: { email }
     });
+    console.log('Found questioner:', questioner);
 
     if (!questioner) {
+      console.log('Questioner not found');
       return res.status(401).json({ message: 'Email atau password salah' });
     }
 
     // Verifikasi password (Anda perlu menambahkan hash password nanti)
     if (password !== questioner.password) {
+      console.log('Invalid password');
       return res.status(401).json({ message: 'Email atau password salah' });
     }
 
@@ -31,6 +35,7 @@ router.post('/login', async (req, res) => {
       process.env.JWT_SECRET || 'your-secret-key',
       { expiresIn: '24h' }
     );
+    console.log('Generated token for questioner:', { id: questioner.id });
 
     res.json({
       token,

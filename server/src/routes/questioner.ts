@@ -276,32 +276,22 @@ router.get('/tryouts/:id', authenticateQuestioner, async (req, res) => {
 // Get all tryout lists for questioner
 router.get('/tryoutlists', authenticateQuestioner, async (req, res) => {
   try {
-    console.log('Mencoba mengambil tryout lists...');
-    const questionerId = req.user.id;
-    console.log('Questioner ID:', questionerId);
-
-    // Ambil semua tryout list
+    console.log('Fetching tryout lists for questioner:', req.user.id);
+    
     const tryoutLists = await prisma.tryoutList.findMany({
+      where: {
+        // Tambahkan filter jika diperlukan
+      },
       orderBy: {
         createdAt: 'desc'
       }
     });
-    console.log('Tryout lists yang ditemukan:', tryoutLists);
 
-    // Konversi BigInt price ke string untuk setiap tryout
-    const response = tryoutLists.map(tryout => ({
-      ...tryout,
-      price: tryout.price.toString()
-    }));
-    console.log('Response yang akan dikirim:', response);
-
-    res.json(response);
+    console.log('Found tryout lists:', tryoutLists.length);
+    res.json(tryoutLists);
   } catch (error) {
-    console.error('Error fetching tryout lists for questioner:', error);
-    res.status(500).json({ 
-      message: 'Server error', 
-      error: error instanceof Error ? error.message : 'Unknown error'
-    });
+    console.error('Get tryout lists error:', error);
+    res.status(500).json({ message: 'Server error' });
   }
 });
 

@@ -7,6 +7,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import { PrismaClient } from '@prisma/client';
 import cookieParser from 'cookie-parser';
+import app from './app';
 
 // Import hanya router yang sudah ada
 import authRouter from './routes/auth';
@@ -18,8 +19,8 @@ import tryoutRouter from './routes/tryout';
 
 // Initialize
 dotenv.config();
-const app = express();
 const prisma = new PrismaClient();
+const port = Number(process.env.PORT) || 3000;
 
 // Cek apakah database tersedia
 const checkDatabaseConnection = async () => {
@@ -34,7 +35,7 @@ const checkDatabaseConnection = async () => {
 
 // Konfigurasi CORS
 app.use(cors({
-  origin: 'https://www.jagobumn.com',
+  origin: ['http://localhost:5173', 'https://bumnjagos.vercel.app', 'https://jagobumn.com', 'https://www.jagobumn.com'],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
   allowedHeaders: ['Content-Type', 'Authorization', 'Origin', 'Accept', 'X-Requested-With']
@@ -108,33 +109,44 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
 });
 
 // Start server
-const PORT = Number(process.env.PORT) || 3000;
-app.listen(PORT, '0.0.0.0', async () => {
-  console.log(`Server running on port ${PORT}`);
-  console.log(`CORS enabled for: ${['http://localhost:5173', 'https://bumnjagos.vercel.app', 'https://jagobumn.com', 'https://www.jagobumn.com'].join(', ')}`);
-  
-  // Cek koneksi database
-  const dbConnected = await checkDatabaseConnection();
-  if (dbConnected) {
-    console.log('✅ Database terhubung!');
-  } else {
-    console.log('❌ Database tidak terhubung!');
-    console.log('💡 MODE TESTING aktif. Menggunakan data mock untuk testing:');
-    console.log('   ├─ Email: test@example.com');
-    console.log('   └─ Password: password123');
+const startServer = async () => {
+  try {
+    const dbConnected = await checkDatabaseConnection();
+    
+    app.listen(port, '0.0.0.0', () => {
+      console.log(`Server running on port ${port}`);
+      console.log(`CORS enabled for: ${['http://localhost:5173', 'https://bumnjagos.vercel.app', 'https://jagobumn.com', 'https://www.jagobumn.com'].join(', ')}`);
+      
+      if (dbConnected) {
+        console.log('✅ Database terhubung!');
+      } else {
+        console.log('❌ Database tidak terhubung!');
+        console.log('💡 MODE TESTING aktif. Menggunakan data mock untuk testing:');
+        console.log('   ├─ Email: test@example.com');
+        console.log('   └─ Password: password123');
+      }
+      
+      console.log('\n📝 REST API Tersedia:');
+      console.log('   ├─ POST /api/auth/login - Login user');
+      console.log('   ├─ POST /api/auth/register - Register user baru');
+      console.log('   ├─ GET /api/auth/me - Mendapatkan informasi user');
+      console.log('   ├─ POST /api/questioner/login - Login questioner');
+      console.log('   ├─ GET /api/questioner/profile - Profile questioner');
+      console.log('   └─ GET /api/questioner/tryoutlists - Daftar tryout');
+    });
+  } catch (error) {
+    console.error('Failed to start server:', error);
+    process.exit(1);
   }
-  
-  console.log('\n📝 REST API Tersedia:');
-  console.log('   ├─ POST /api/auth/login - Login user');
-  console.log('   ├─ POST /api/auth/register - Register user baru');
-  console.log('   └─ GET /api/auth/me - Mendapatkan informasi user');
-});
+};
 
 // Handle shutdown
 process.on('SIGTERM', async () => {
   await prisma.$disconnect();
   process.exit(0);
 });
+
+startServer();
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {

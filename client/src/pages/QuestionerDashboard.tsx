@@ -151,9 +151,25 @@ const QuestionerDashboard = () => {
         console.error('Profile data is not an object:', profileResponse.data);
         toast.error('Format data profile tidak valid');
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching dashboard data:', error);
-      toast.error('Gagal memuat data dashboard');
+      
+      // Tampilkan pesan error yang lebih spesifik
+      if (error.response) {
+        // Error dari server dengan response
+        toast.error(error.response.data.message || 'Gagal memuat data dashboard');
+      } else if (error.request) {
+        // Error karena tidak ada response
+        toast.error('Tidak dapat terhubung ke server');
+      } else {
+        // Error lainnya
+        toast.error('Terjadi kesalahan saat memuat data');
+      }
+
+      // Jika error 401, redirect ke login
+      if (error.response?.status === 401) {
+        navigate('/questioner/login');
+      }
     } finally {
       setLoading(false);
     }
