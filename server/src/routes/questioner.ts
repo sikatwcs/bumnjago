@@ -337,57 +337,92 @@ router.get('/tryouts/:id', authenticateQuestioner, async (req, res) => {
   }
 });
 
-// Get all tryout lists for questioner
+// Get all tryout lists
 router.get('/tryoutlists', authenticateQuestioner, async (req, res) => {
   try {
-    console.log('Fetching tryout lists for questioner:', req.user.id);
-    
+    console.log('Fetching tryout lists for questioner:', req.user?.id);
+
+    // Pastikan user terautentikasi
+    if (!req.user?.id) {
+      return res.status(401).json({ 
+        message: 'Unauthorized access'
+      });
+    }
+
+    // Ambil data dari database dengan error handling yang lebih baik
     const tryoutLists = await prisma.tryoutList.findMany({
       where: {
-        // Tambahkan filter jika diperlukan
+        status: true // Hanya ambil yang aktif
       },
       orderBy: {
         createdAt: 'desc'
+      },
+      select: {
+        id: true,
+        title: true,
+        price: true,
+        description: true,
+        batch: true,
+        type: true,
+        status: true,
+        isOnline: true,
+        createdAt: true,
+        updatedAt: true
+      }
+    }).catch(error => {
+      console.error('Database error:', error);
+      throw new Error('Failed to fetch tryout lists from database');
+    });
+    
+    // Konversi BigInt price ke string dengan error handling
+    const response = tryoutLists.map(tryout => {
+      try {
+        return {
+          ...tryout,
+          price: tryout.price.toString()
+        };
+      } catch (error) {
+        console.error('Error converting price for tryout:', tryout.id, error);
+        return {
+          ...tryout,
+          price: '0' // Fallback jika ada error konversi
+        };
       }
     });
-
-    console.log('Found tryout lists:', tryoutLists.length);
-    res.json(tryoutLists);
-  } catch (error: unknown) {
-    console.error('Get tryout lists error:', error);
+    
+    console.log('Successfully fetched tryout lists:', response.length);
+    res.json(response);
+  } catch (error) {
+    console.error('Error in /tryoutlists endpoint:', error);
     res.status(500).json({ 
-      message: 'Server error',
-      error: process.env.NODE_ENV === 'development' ? handleError(error) : undefined
+      message: 'Internal server error',
+      details: error instanceof Error ? error.message : 'Unknown error'
     });
   }
 });
 
-// Get tryout questions by tryout list ID
+// Get tryouts by tryout list ID
 router.get('/tryouts/:tryoutListId', authenticateQuestioner, async (req, res) => {
   try {
     const tryoutListId = parseInt(req.params.tryoutListId);
-    const questionerId = req.user.id;
-
+    
     const tryouts = await prisma.tryout.findMany({
-      where: { 
+      where: {
         tryoutListId: tryoutListId
       },
       orderBy: {
         number: 'asc'
       }
     });
-
+    
     res.json(tryouts);
-  } catch (error: unknown) {
-    console.error('Error fetching tryout questions:', error);
-    res.status(500).json({ 
-      message: 'Server error',
-      error: process.env.NODE_ENV === 'development' ? handleError(error) : undefined
-    });
+  } catch (error) {
+    console.error('Error fetching tryouts:', error);
+    res.status(500).json({ message: 'Server error' });
   }
 });
 
-// Create tryout question
+// Create new tryout question
 router.post('/tryouts', authenticateQuestioner, async (req, res) => {
   try {
     const {
@@ -395,6 +430,7 @@ router.post('/tryouts', authenticateQuestioner, async (req, res) => {
       number,
       question,
       explanation,
+      imageUrl,
       optionA,
       optionB,
       optionC,
@@ -402,21 +438,8 @@ router.post('/tryouts', authenticateQuestioner, async (req, res) => {
       optionE,
       correctAnswer,
       type,
-      subType,
-      imageUrl
+      subType
     } = req.body;
-
-    // Validasi tipe dan subtipe
-    if (!Object.values(TestType).includes(type as TestType)) {
-      return res.status(400).json({ message: 'Tipe test tidak valid' });
-    }
-
-    const testType = type as TestType;
-    const validSubTypes = VALID_SUBTYPES[testType];
-    
-    if (!validSubTypes.includes(subType as SubType)) {
-      return res.status(400).json({ message: 'Subtipe tidak valid untuk tipe test ini' });
-    }
 
     const newTryout = await prisma.tryout.create({
       data: {
@@ -424,107 +447,80 @@ router.post('/tryouts', authenticateQuestioner, async (req, res) => {
         number: parseInt(number),
         question,
         explanation,
+        imageUrl,
         optionA,
         optionB,
         optionC,
         optionD,
         optionE,
         correctAnswer,
-        type: testType,
-        subType: subType as SubType,
-        imageUrl
+        type,
+        subType
       }
     });
 
     res.status(201).json(newTryout);
-  } catch (error: unknown) {
-    console.error('Create question error:', error);
-    
-    if (error instanceof Error) {
-      if (error.message.includes('tidak ditemukan') || 
-          error.message.includes('sudah digunakan')) {
-        return res.status(400).json({ message: error.message });
-      }
-    }
-
-    res.status(500).json({ 
-      message: 'Server error',
-      error: process.env.NODE_ENV === 'development' ? handleError(error) : undefined
-    });
+  } catch (error) {
+    console.error('Error creating tryout:', error);
+    res.status(500).json({ message: 'Server error' });
   }
 });
 
 // Update tryout question
 router.put('/tryouts/:id', authenticateQuestioner, async (req, res) => {
   try {
-    const tryoutId = parseInt(req.params.id);
-    const updateData = req.body;
-
-    // Validasi tipe dan subtipe jika ada dalam updateData
-    if (updateData.type) {
-      const testType = updateData.type as TestType;
-      if (!Object.values(TestType).includes(testType)) {
-        return res.status(400).json({ message: 'Tipe test tidak valid' });
-      }
-
-      if (updateData.subType && !VALID_SUBTYPES[testType].includes(updateData.subType as SubType)) {
-        return res.status(400).json({ message: 'Subtipe tidak valid untuk tipe test ini' });
-      }
-    }
+    const id = parseInt(req.params.id);
+    const {
+      question,
+      explanation,
+      imageUrl,
+      optionA,
+      optionB,
+      optionC,
+      optionD,
+      optionE,
+      correctAnswer,
+      type,
+      subType
+    } = req.body;
 
     const updatedTryout = await prisma.tryout.update({
-      where: { id: tryoutId },
+      where: { id },
       data: {
-        ...updateData,
-        tryoutListId: updateData.tryoutListId ? parseInt(updateData.tryoutListId) : undefined,
-        number: updateData.number ? parseInt(updateData.number) : undefined,
-        type: updateData.type as TestType | undefined,
-        subType: updateData.subType as SubType | undefined
+        question,
+        explanation,
+        imageUrl,
+        optionA,
+        optionB,
+        optionC,
+        optionD,
+        optionE,
+        correctAnswer,
+        type,
+        subType
       }
     });
 
     res.json(updatedTryout);
-  } catch (error: unknown) {
-    console.error('Update question error:', error);
-    
-    if (error instanceof Error) {
-      if (error.message.includes('tidak ditemukan') || 
-          error.message.includes('sudah digunakan')) {
-        return res.status(400).json({ message: error.message });
-      }
-
-      if ('code' in error && (error as any).code === 'P2025') {
-        return res.status(404).json({ message: 'Soal tidak ditemukan' });
-      }
-    }
-
-    res.status(500).json({ 
-      message: 'Server error',
-      error: process.env.NODE_ENV === 'development' ? handleError(error) : undefined
-    });
+  } catch (error) {
+    console.error('Error updating tryout:', error);
+    res.status(500).json({ message: 'Server error' });
   }
 });
 
 // Delete tryout question
 router.delete('/tryouts/:id', authenticateQuestioner, async (req, res) => {
   try {
-    const tryoutId = parseInt(req.params.id);
-    await prisma.tryout.delete({
-      where: { id: tryoutId }
-    });
-
-    res.json({ message: 'Soal berhasil dihapus' });
-  } catch (error: unknown) {
-    console.error('Delete question error:', error);
+    const id = parseInt(req.params.id);
     
-    if (error instanceof Error && 'code' in error && (error as any).code === 'P2025') {
-      return res.status(404).json({ message: 'Soal tidak ditemukan' });
-    }
-
-    res.status(500).json({ 
-      message: 'Server error',
-      error: process.env.NODE_ENV === 'development' ? handleError(error) : undefined
+    await prisma.tryout.delete({
+      where: { id }
     });
+    
+    res.json({ message: 'Tryout deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting tryout:', error);
+    res.status(500).json({ message: 'Server error' });
   }
 });
 

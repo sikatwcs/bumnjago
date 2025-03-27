@@ -142,53 +142,60 @@ export const authenticateAdmin = async (req: Request, res: Response, next: NextF
   }
 };
 
-export const authenticateQuestioner = async (req: Request, res: Response, next: NextFunction) => {
-  const authHeader = req.headers['authorization'];
-  console.log('Auth header:', authHeader);
-  const token = authHeader && authHeader.split(' ')[1];
-  console.log('Token:', token);
+interface AuthRequest extends Request {
+  user?: {
+    id: number;
+    email: string;
+    role: string;
+  };
+}
 
-  if (!token) {
-    return res.status(401).json({ message: 'Authentication token required' });
-  }
-
+export const authenticateQuestioner = async (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+) => {
   try {
-    console.log('Mencoba verifikasi token dengan JWT_SECRET:', process.env.JWT_SECRET);
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key') as any;
-    console.log('Token berhasil diverifikasi:', decoded);
+    console.log('Authenticating questioner request...');
     
-    // Cek apakah database tersedia
-    const dbAvailable = await isDatabaseAvailable();
-    console.log('Database tersedia:', dbAvailable);
-    
-    if (dbAvailable) {
-      // Cek apakah ini questioner
-      const questioner = await prisma.questioner.findUnique({
-        where: { id: decoded.id }
-      });
-      console.log('Questioner ditemukan:', questioner);
-      
-      if (!questioner) {
-        return res.status(403).json({ message: 'Questioner access required' });
-      }
-      
-      req.user = questioner;
-    } else {
-      // Untuk pengembangan, ijinkan akses questioner
-      console.log('Using mock questioner in authenticateQuestioner middleware');
-      req.user = {
-        id: decoded.id || 1,
-        email: 'questioner@example.com',
-        name: 'Mock Questioner'
-      };
+    const authHeader = req.headers.authorization;
+    console.log('Auth header:', authHeader ? 'Present' : 'Missing');
+
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      console.log('Invalid or missing authorization header');
+      return res.status(401).json({ message: 'No token provided' });
     }
-    
-    next();
+
+    const token = authHeader.split(' ')[1];
+    console.log('Token received, verifying...');
+
+    try {
+      const decoded = jwt.verify(
+        token,
+        process.env.JWT_SECRET || 'your-secret-key'
+      ) as any;
+
+      console.log('Token verified for questioner:', decoded.email);
+
+      if (decoded.role !== 'questioner') {
+        console.log('Invalid role:', decoded.role);
+        return res.status(403).json({ message: 'Not authorized as questioner' });
+      }
+
+      req.user = {
+        id: decoded.id,
+        email: decoded.email,
+        role: decoded.role
+      };
+
+      console.log('Authentication successful');
+      next();
+    } catch (jwtError) {
+      console.error('JWT verification failed:', jwtError);
+      return res.status(401).json({ message: 'Invalid token' });
+    }
   } catch (error) {
-    console.error('Error verifikasi token:', error);
-    return res.status(403).json({ 
-      message: 'Invalid token',
-      error: error instanceof Error ? error.message : 'Unknown error'
-    });
+    console.error('Authentication error:', error);
+    res.status(500).json({ message: 'Authentication failed' });
   }
 }; 

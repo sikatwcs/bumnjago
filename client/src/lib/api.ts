@@ -8,7 +8,7 @@ interface ImportMeta {
 
 import axios from 'axios';
 
-const baseURL = import.meta.env.VITE_API_URL || 'https://api.jagobumn.com/api';
+const baseURL = import.meta.env.VITE_API_URL || 'https://api.jagobumn.com';
 console.log('Using API baseURL:', baseURL);
 
 const api = axios.create({
@@ -17,7 +17,7 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
-  timeout: 10000, // 10 seconds timeout
+  timeout: 30000, // Menambah timeout menjadi 30 detik
 });
 
 // Request interceptor
@@ -26,26 +26,23 @@ api.interceptors.request.use(
     const url = config.url?.toLowerCase() || '';
     let token;
 
-    // Log request details
-    console.log('Request URL:', url);
-
     // Determine which token to use based on URL
-    if (url.includes('/admin/') || url.includes('/admin-tryout/')) {
-      token = localStorage.getItem('admin-token');
-      console.log('Using admin token for admin endpoint:', url);
-    } else if (url.includes('/questioner/')) {
-      token = localStorage.getItem('questioner-token');
-      console.log('Using questioner token for questioner endpoint:', url);
-    } else {
-      token = localStorage.getItem('token');
-      console.log('Using user token for endpoint:', url);
+    if (url.includes('/questioner/')) {
+      token = localStorage.getItem('questioner_token'); // Mengubah format token key
+      console.log('Using questioner token for:', url);
     }
-
-    // Log full request URL
-    console.log('Sending request to:', `${config.baseURL}${config.url}`);
 
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
+    }
+
+    // Log request details in development
+    if (process.env.NODE_ENV === 'development') {
+      console.log('Request:', {
+        url: `${config.baseURL}${config.url}`,
+        method: config.method,
+        headers: config.headers,
+      });
     }
 
     return config;
@@ -59,37 +56,29 @@ api.interceptors.request.use(
 // Response interceptor
 api.interceptors.response.use(
   (response) => {
-    // Log successful response
-    console.log('Response received:', {
-      endpoint: response.config.url,
-      status: response.status,
-      data: response.data
-    });
+    if (process.env.NODE_ENV === 'development') {
+      console.log('Response:', {
+        url: response.config.url,
+        status: response.status,
+        data: response.data
+      });
+    }
     return response;
   },
   (error) => {
-    // Log error response
-    console.error('Response error:', {
-      endpoint: error.config?.url,
+    // Log detailed error information
+    console.error('API Error:', {
+      url: error.config?.url,
       status: error.response?.status,
       message: error.message,
-      data: error.response?.data
+      data: error.response?.data,
+      stack: error.stack
     });
 
-    // Handle unauthorized access based on URL path
+    // Handle 401 Unauthorized
     if (error.response?.status === 401) {
-      const url = error.config?.url?.toLowerCase() || '';
-      
-      if (url.includes('/admin/') || url.includes('/admin-tryout/')) {
-        localStorage.removeItem('admin-token');
-        window.location.href = '/admin/login';
-      } else if (url.includes('/questioner/')) {
-        localStorage.removeItem('questioner-token');
-        window.location.href = '/questioner/login';
-      } else {
-        localStorage.removeItem('token');
-        window.location.href = '/login';
-      }
+      localStorage.removeItem('questioner_token');
+      window.location.href = '/questioner/login';
     }
 
     return Promise.reject(error);
