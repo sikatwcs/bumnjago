@@ -58,9 +58,12 @@ router.post('/login', async (req, res) => {
 
     // Validasi input
     if (!email || !password) {
+      console.error('Missing email or password in request');
       return res.status(400).json({
-        success: false,
-        message: 'Email dan password harus diisi'
+        token: null,
+        questioner: null,
+        message: 'Email dan password harus diisi',
+        success: false
       });
     }
 
@@ -72,8 +75,10 @@ router.post('/login', async (req, res) => {
     if (!questioner) {
       console.log('Questioner not found:', email);
       return res.status(404).json({
-        success: false,
-        message: 'Akun tidak ditemukan'
+        token: null,
+        questioner: null,
+        message: 'Akun tidak ditemukan',
+        success: false
       });
     }
 
@@ -82,8 +87,10 @@ router.post('/login', async (req, res) => {
     if (!isValidPassword) {
       console.log('Invalid password for:', email);
       return res.status(401).json({
-        success: false,
-        message: 'Email atau password salah'
+        token: null,
+        questioner: null,
+        message: 'Email atau password salah',
+        success: false
       });
     }
 
@@ -98,29 +105,30 @@ router.post('/login', async (req, res) => {
       { expiresIn: '24h' }
     );
 
-    // Format response dengan success flag
+    // Format response dalam format sederhana yang lebih mudah di-parse
     const response = {
-      success: true,
+      token,
+      questioner: {
+        id: questioner.id,
+        name: questioner.name,
+        email: questioner.email,
+        role: 'questioner'
+      },
       message: 'Login berhasil',
-      data: {
-        token,
-        user: {
-          id: questioner.id,
-          name: questioner.name,
-          email: questioner.email,
-          role: 'questioner'
-        }
-      }
+      success: true
     };
 
-    console.log('Login successful:', { email });
+    console.log('Login successful for:', email);
+    console.log('Token generated:', token.substring(0, 20) + '...');
     res.json(response);
 
   } catch (error) {
     console.error('Login error:', error);
     res.status(500).json({
-      success: false,
-      message: 'Terjadi kesalahan saat login'
+      token: null,
+      questioner: null,
+      message: 'Terjadi kesalahan saat login',
+      success: false
     });
   }
 });

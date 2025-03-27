@@ -30,17 +30,26 @@ const QuestionerLogin = () => {
 
     try {
       setIsLoading(true);
-      console.log('Submitting login form...');
+      console.log('Submitting login form with email:', email);
+      
+      // Tambahkan toast informasi untuk debugging
+      toast.info('Menghubungi server...');
       
       await login(email, password);
       
       console.log('Login successful, redirecting...');
       toast.success('Login berhasil');
       
-      // Beri waktu untuk toast muncul sebelum redirect
+      // Beri waktu untuk state diupdate
       setTimeout(() => {
+        // Log token untuk debug (hanya substring awal)
+        const token = localStorage.getItem('questioner_token');
+        if (token) {
+          console.log('Token stored:', token.substring(0, 10) + '...');
+        }
+        
         navigate('/questioner/dashboard');
-      }, 1000);
+      }, 1500);
 
     } catch (error: any) {
       console.error('Login form error:', {
@@ -48,16 +57,26 @@ const QuestionerLogin = () => {
         error
       });
       
-      // Tampilkan pesan error yang lebih spesifik
-      if (error.message.includes('tidak ditemukan')) {
+      // Tampilkan pesan error spesifik berdasarkan pesan error
+      if (error.message?.includes('tidak ditemukan')) {
         toast.error('Akun tidak ditemukan');
-      } else if (error.message.includes('password salah')) {
-        toast.error('Password salah');
-      } else if (error.message.includes('terhubung')) {
-        toast.error('Tidak dapat terhubung ke server');
+      } else if (error.message?.includes('password salah') || error.message?.includes('salah')) {
+        toast.error('Email atau password salah');
+      } else if (error.message?.includes('server') || error.message?.includes('koneksi')) {
+        toast.error('Masalah koneksi server. Coba lagi nanti.');
+      } else if (error.message?.includes('timeout')) {
+        toast.error('Server tidak merespons. Periksa koneksi internet Anda.');
       } else {
         toast.error(error.message || 'Gagal masuk ke sistem');
       }
+      
+      // Tampilkan toast untuk mengganti password
+      setTimeout(() => {
+        toast("Pastikan email dan password sudah benar", {
+          description: "Jika masih bermasalah, hubungi administrator.",
+          duration: 5000,
+        });
+      }, 1000);
     } finally {
       setIsLoading(false);
     }

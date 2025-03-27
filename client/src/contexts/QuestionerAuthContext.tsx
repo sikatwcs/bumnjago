@@ -52,41 +52,74 @@ export const QuestionerAuthProvider: React.FC<{ children: React.ReactNode }> = (
       const response = await api.post('/api/questioner/login', { 
         email, 
         password 
-      });
+      }, { timeout: 60000 });
       
-      console.log('Login response:', response.data);
+      console.log('Raw response:', response);
+      console.log('Login response data:', response.data);
 
-      if (!response.data.success) {
-        throw new Error(response.data.message || 'Login gagal');
+      let token, userData;
+      
+      if (response.data.token && response.data.questioner) {
+        token = response.data.token;
+        userData = {
+          id: response.data.questioner.id,
+          name: response.data.questioner.name,
+          email: response.data.questioner.email,
+          role: 'questioner'
+        };
+        console.log('Format 1 detected');
+      } else if (response.data.success && response.data.data) {
+        token = response.data.data.token;
+        userData = response.data.data.user;
+        console.log('Format 2 detected');
+      } else if (typeof response.data === 'object') {
+        console.log('Unknown format, attempting to extract data');
+        
+        if (response.data.token) {
+          token = response.data.token;
+        } else if (response.data.data?.token) {
+          token = response.data.data.token;
+        }
+        
+        if (response.data.questioner) {
+          userData = {
+            id: response.data.questioner.id,
+            name: response.data.questioner.name,
+            email: response.data.questioner.email,
+            role: 'questioner'
+          };
+        } else if (response.data.data?.user) {
+          userData = response.data.data.user;
+        } else if (response.data.user) {
+          userData = response.data.user;
+        }
       }
-
-      const { token, user } = response.data.data;
-      if (!token || !user) {
-        throw new Error('Data login tidak lengkap');
+      
+      if (!token || !userData) {
+        console.error('Required data not found in response:', response.data);
+        throw new Error('Data login tidak lengkap atau format tidak valid');
       }
-
+      
       localStorage.setItem('questioner_token', token);
-      setQuestioner({
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        role: user.role
-      });
-
-      console.log('Login successful, user:', user);
+      setQuestioner(userData);
+      
+      console.log('Login successful, parsed data:', { token: token.substring(0, 10) + '...', userData });
+      return;
 
     } catch (error: any) {
-      console.error('Login error details:', {
-        message: error.message,
-        response: error.response?.data,
-        status: error.response?.status
-      });
-
+      console.error('Login error details:', error);
+      
       if (error.response) {
-        throw new Error(error.response.data.message || 'Terjadi kesalahan saat login');
+        console.error('Server response error:', {
+          status: error.response.status,
+          data: error.response.data
+        });
+        throw new Error(error.response.data?.message || 'Terjadi kesalahan saat login');
       } else if (error.request) {
-        throw new Error('Tidak dapat terhubung ke server');
+        console.error('No response received:', error.request);
+        throw new Error('Tidak ada respons dari server, periksa koneksi internet Anda');
       } else {
+        console.error('Other error:', error.message);
         throw new Error(error.message || 'Terjadi kesalahan saat login');
       }
     }
