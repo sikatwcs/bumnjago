@@ -120,7 +120,13 @@ export default function AuthForm({ mode }: AuthFormProps) {
 
     try {
       console.log('Login attempt:', loginData.email);
-      const response = await api.post('/auth/login', loginData);
+      const response = await api.post('/auth/login', loginData, {
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        }
+      });
+      
       if (response.data.token) {
         localStorage.setItem('token', response.data.token);
         localStorage.setItem('loginTime', Date.now().toString());
@@ -133,7 +139,17 @@ export default function AuthForm({ mode }: AuthFormProps) {
       }
     } catch (err: any) {
       console.error('Login error:', err);
-      setError(err.response?.data?.message || 'Error logging in');
+      let errorMessage = 'Error logging in';
+      
+      if (err.response) {
+        errorMessage = err.response.data?.message || 'Server error';
+      } else if (err.request) {
+        errorMessage = 'No response from server';
+      } else {
+        errorMessage = err.message;
+      }
+      
+      setError(errorMessage);
     } finally {
       setIsLoading(false);
     }

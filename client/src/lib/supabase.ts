@@ -1,13 +1,16 @@
 import axios from 'axios';
 
-const baseURL = import.meta.env.VITE_API_URL;
+// Gunakan URL dari environment tanpa cors-anywhere
+const baseURL = '/api';
 
 const api = axios.create({
   baseURL,
   withCredentials: false,
   headers: {
     'Content-Type': 'application/json',
+    'Accept': 'application/json'
   },
+  timeout: 10000 // timeout 10 detik
 });
 
 console.log('=== API Configuration ===');
