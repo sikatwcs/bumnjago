@@ -121,17 +121,16 @@ export default function AuthForm({ mode }: AuthFormProps) {
     try {
       console.log('Login attempt:', loginData.email);
       const response = await api.post('/auth/login', loginData);
-      const { token, user } = response.data;
+      if (response.data.token) {
+        localStorage.setItem('token', response.data.token);
+        localStorage.setItem('loginTime', Date.now().toString());
+        
+        // Login dengan context
+        login(response.data.token, response.data.user);
 
-      // Simpan token dan data
-      localStorage.setItem('token', token);
-      localStorage.setItem('loginTime', Date.now().toString());
-      
-      // Login dengan context
-      login(token, user);
-
-      // Redirect ke dashboard
-      navigate('/dashboard');
+        // Redirect ke dashboard
+        navigate('/dashboard');
+      }
     } catch (err: any) {
       console.error('Login error:', err);
       setError(err.response?.data?.message || 'Error logging in');

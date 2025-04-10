@@ -2,28 +2,26 @@ import axios from 'axios';
 
 // Dapatkan base URL dari environment variable
 const baseURL = import.meta.env.VITE_API_URL;
-// const baseURL = 'http://157.66.34.226:3000'; // Hapus atau komentar
 
-console.log('API Base URL:', baseURL); // Untuk debugging
+console.log('API Base URL:', baseURL);
 
 const api = axios.create({
   baseURL,
-  withCredentials: true,
+  // Ubah withCredentials menjadi false karena kita menggunakan token
+  withCredentials: false,
   headers: {
     'Content-Type': 'application/json',
     'Accept': 'application/json'
   }
 });
 
-// Add request interceptor untuk debugging
+// Add request interceptor untuk menambahkan token
 api.interceptors.request.use(
   (config) => {
-    // Pastikan credentials selalu true untuk setiap request
-    config.withCredentials = true;
-    
-    // Pastikan credentials disertakan
-    if (config.headers) {
-      config.headers['Access-Control-Allow-Credentials'] = 'true';
+    // Ambil token dari localStorage
+    const token = localStorage.getItem('token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
     }
     
     // Log request untuk debugging
@@ -32,8 +30,7 @@ api.interceptors.request.use(
       method: config.method,
       headers: config.headers,
       data: config.data,
-      baseURL: config.baseURL,
-      withCredentials: config.withCredentials
+      baseURL: config.baseURL
     });
     
     return config;
@@ -60,8 +57,15 @@ api.interceptors.response.use(
       data: error.response?.data,
       message: error.message
     });
+    
+    // Handle 401 Unauthorized
+    if (error.response?.status === 401) {
+      localStorage.removeItem('token');
+      window.location.href = '/login';
+    }
+    
     return Promise.reject(error);
   }
 );
 
-export default api; 
+export default api;
