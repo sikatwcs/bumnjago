@@ -6,12 +6,13 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
-    "build": "tsc",
+    "build": "npx tsc",
     "start": "node dist/index.js",
     "init-admin": "ts-node src/scripts/init-admin.ts",
     "init-questioner": "ts-node src/scripts/init-questioner.ts",
     "prisma:generate": "prisma generate",
-    "prisma:migrate": "prisma migrate deploy"
+    "prisma:migrate": "prisma migrate deploy",
+    "check-server": "ts-node src/utils/check-server.ts"
   },
   "keywords": [],
   "author": "",

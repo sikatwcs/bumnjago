@@ -102,43 +102,61 @@ export const authMiddleware = async (req: Request, res: Response, next: NextFunc
 };
 
 export const authenticateAdmin = async (req: Request, res: Response, next: NextFunction) => {
-  const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.split(' ')[1];
-
-  if (!token) {
-    return res.status(401).json({ message: 'Authentication token required' });
-  }
-
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key') as any;
+    console.log('Authenticating admin request...');
     
-    // Cek apakah database tersedia
-    const dbAvailable = await isDatabaseAvailable();
+    const authHeader = req.headers['authorization'];
+    console.log('Auth header:', authHeader ? 'Present' : 'Missing');
     
-    if (dbAvailable) {
-      // Cek apakah ini admin
-      const admin = await prisma.admin.findUnique({
-        where: { id: decoded.id }
-      });
-      
-      if (!admin) {
-        return res.status(403).json({ message: 'Admin access required' });
-      }
-      
-      req.user = admin;
-    } else {
-      // Untuk pengembangan, ijinkan akses admin
-      console.log('Using mock admin in authenticateAdmin middleware');
-      req.user = {
-        id: decoded.id || 1,
-        email: 'admin@example.com',
-        name: 'Mock Admin'
-      };
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      console.log('Invalid or missing authorization header');
+      return res.status(401).json({ message: 'Authentication token required' });
     }
     
-    next();
-  } catch (error) {
-    return res.status(403).json({ message: 'Invalid token' });
+    const token = authHeader.split(' ')[1];
+    console.log('Token received, verifying...');
+
+    // Ambil JWT Secret
+    const jwtSecret = process.env.JWT_SECRET || 'your-secret-key';
+    
+    try {
+      const decoded = jwt.verify(token, jwtSecret) as any;
+      console.log('Token verified for admin:', decoded.email);
+      
+      // Cek apakah database tersedia
+      const dbAvailable = await isDatabaseAvailable();
+      
+      if (dbAvailable) {
+        // Cek apakah ini admin
+        const admin = await prisma.admin.findUnique({
+          where: { id: decoded.id }
+        });
+        
+        if (!admin) {
+          console.log('Admin authentication failed: Admin not found for id', decoded.id);
+          return res.status(403).json({ message: 'Admin access required' });
+        }
+        
+        req.user = admin;
+        console.log('Admin successfully authenticated:', { id: admin.id, email: admin.email });
+      } else {
+        // Untuk pengembangan, ijinkan akses admin
+        console.log('Using mock admin in authenticateAdmin middleware');
+        req.user = {
+          id: decoded.id || 1,
+          email: decoded.email || 'admin@example.com',
+          name: decoded.name || 'Mock Admin'
+        };
+      }
+      
+      next();
+    } catch (jwtError: any) {
+      console.error('JWT verification failed:', jwtError.message);
+      return res.status(401).json({ message: 'Invalid token: ' + jwtError.message });
+    }
+  } catch (error: any) {
+    console.error('Admin authentication error:', error);
+    return res.status(500).json({ message: 'Authentication error' });
   }
 };
 
