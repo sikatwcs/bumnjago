@@ -1,7 +1,7 @@
 import axios from 'axios';
 
-// Gunakan URL dari environment
-const baseURL = import.meta.env.VITE_API_URL || '/api';
+// Gunakan URL dari environment, pastikan tidak menggunakan cors-anywhere
+const baseURL = '/api';
 
 const api = axios.create({
   baseURL,

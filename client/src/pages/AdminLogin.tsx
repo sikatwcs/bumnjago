@@ -23,16 +23,15 @@ const AdminLogin = () => {
   const checkApiConnection = async () => {
     setApiStatus("checking");
     try {
-      const baseUrl = import.meta.env.VITE_API_URL || 'https://api.jagobumn.com';
-      console.log("Checking API connection to:", baseUrl);
-      
-      const response = await axios.get(`${baseUrl}/`, { timeout: 5000 });
-      console.log("API connection result:", response.data);
+      console.log("Checking API connection...");
+      const response = await api.get('/');
       
       if (response.status === 200) {
         setApiStatus("connected");
+        console.log("API connection successful:", response.data);
       } else {
         setApiStatus("error");
+        console.error("API connection failed:", response.status);
       }
     } catch (error) {
       console.error("API connection error:", error);
