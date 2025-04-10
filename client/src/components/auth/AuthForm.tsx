@@ -120,12 +120,7 @@ export default function AuthForm({ mode }: AuthFormProps) {
 
     try {
       console.log('Login attempt:', loginData.email);
-      const response = await api.post('/auth/login', loginData, {
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        }
-      });
+      const response = await api.post('/auth/login', loginData);
       
       if (response.data.token) {
         localStorage.setItem('token', response.data.token);
@@ -142,11 +137,14 @@ export default function AuthForm({ mode }: AuthFormProps) {
       let errorMessage = 'Error logging in';
       
       if (err.response) {
-        errorMessage = err.response.data?.message || 'Server error';
+        errorMessage = err.response.data?.message || `Server error: ${err.response.status}`;
+        console.error('Server response:', err.response.data);
       } else if (err.request) {
-        errorMessage = 'No response from server';
+        errorMessage = 'No response from server. Please check your connection.';
+        console.error('No response:', err.request);
       } else {
         errorMessage = err.message;
+        console.error('Error:', err.message);
       }
       
       setError(errorMessage);

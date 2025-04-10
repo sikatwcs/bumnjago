@@ -1,11 +1,10 @@
 import axios from 'axios';
 
-// Gunakan URL dari environment tanpa cors-anywhere
-const baseURL = '/api';
+const baseURL = 'https://api.jagobumn.com';
 
 const api = axios.create({
   baseURL,
-  withCredentials: false,
+  withCredentials: true,
   headers: {
     'Content-Type': 'application/json',
     'Accept': 'application/json'
