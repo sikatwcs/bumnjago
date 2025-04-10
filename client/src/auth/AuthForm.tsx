@@ -1,17 +1,20 @@
 import { useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/components/ui/use-toast';
-import { useAuth } from '@/utils/auth';
+import { useAuth } from '@/contexts/AuthContext';
+import api from '@/lib/api';
 
-const AuthForm = () => {
-  const [searchParams] = useSearchParams();
-  const mode = searchParams.get('mode') || 'login';
+interface AuthFormProps {
+  mode: 'login' | 'register';
+}
+
+const AuthForm = ({ mode }: AuthFormProps) => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { login, register } = useAuth();
+  const { login } = useAuth();
   
   const [formData, setFormData] = useState({
     name: '',
@@ -59,35 +62,73 @@ const AuthForm = () => {
     setErrors(prev => ({ ...prev, [name]: '' }));
   };
   
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!validateForm()) {
-      return;
-    }
-    
     setLoading(true);
-    
+    setErrors({});
+
     try {
-      if (mode === 'register') {
-        await register(formData.name, formData.email, formData.password);
-        navigate('/dashboard');
-      } else {
-        await login(formData.email, formData.password);
+      console.log('Login attempt:', formData.email);
+      const response = await api.post('/auth/login', {
+        email: formData.email,
+        password: formData.password
+      }, {
+        withCredentials: false
+      });
+      
+      if (response.data.token) {
+        localStorage.setItem('token', response.data.token);
+        localStorage.setItem('loginTime', Date.now().toString());
+        
+        login(response.data.token, response.data.user);
         navigate('/dashboard');
       }
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Terjadi kesalahan';
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: errorMessage,
+    } catch (err: any) {
+      console.error('Login error:', err);
+      setErrors({
+        email: err.response?.data?.message || 'Error logging in',
+        password: err.response?.data?.message || 'Error logging in'
       });
     } finally {
       setLoading(false);
     }
   };
-  
+
+  const handleRegister = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setErrors({});
+
+    try {
+      console.log('Register data:', formData);
+      const response = await api.post('/auth/register', {
+        name: formData.name,
+        email: formData.email,
+        password: formData.password
+      }, {
+        withCredentials: false
+      });
+      
+      const { token, user } = response.data;
+
+      localStorage.setItem('token', token);
+      localStorage.setItem('loginTime', Date.now().toString());
+      
+      login(token, user);
+      navigate('/dashboard');
+    } catch (err: any) {
+      console.error('Registration error:', err);
+      setErrors({
+        name: err.response?.data?.message || 'Error creating account',
+        email: err.response?.data?.message || 'Error creating account',
+        password: err.response?.data?.message || 'Error creating account',
+        confirmPassword: err.response?.data?.message || 'Error creating account'
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="w-full max-w-md mx-auto">
       <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
@@ -103,7 +144,7 @@ const AuthForm = () => {
         </div>
         
         <div className="p-8">
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={mode === 'login' ? handleLogin : handleRegister} className="space-y-4">
             {mode === 'register' && (
               <div className="space-y-2">
                 <Label htmlFor="name">Nama Lengkap</Label>
