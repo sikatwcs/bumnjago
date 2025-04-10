@@ -5,53 +5,15 @@
       "destination": "https://api.jagobumn.com/:path*"
     }
   ],
-  "buildCommand": "npx vite build",
-  "outputDirectory": "dist",
-  "framework": "vite",
   "headers": [
-    {
-      "source": "/(.*)",
-      "headers": [
-        {
-          "key": "Cache-Control",
-          "value": "public, max-age=0, must-revalidate"
-        }
-      ]
-    },
-    {
-      "source": "/assets/(.*)",
-      "headers": [
-        {
-          "key": "Cache-Control",
-          "value": "public, max-age=31536000, immutable"
-        }
-      ]
-    },
     {
       "source": "/api/(.*)",
       "headers": [
         { "key": "Access-Control-Allow-Credentials", "value": "true" },
-        { "key": "Access-Control-Allow-Origin", "value": "*" },
+        { "key": "Access-Control-Allow-Origin", "value": "https://jagobumn.com" },
         { "key": "Access-Control-Allow-Methods", "value": "GET,OPTIONS,PATCH,DELETE,POST,PUT" },
-        { "key": "Access-Control-Allow-Headers", "value": "X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, Authorization" }
+        { "key": "Access-Control-Allow-Headers", "value": "X-CSRF-Token, X-Requested-With, Accept, Content-Type, Authorization" }
       ]
     }
-  ],
-  "env": {
-    "VITE_SUPABASE_URL": "https://rkeufelbokirtpzcseuo.supabase.co",
-    "VITE_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJrZXVmZWxib2tpcnRwemNzZXVvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDIxNzc4NjMsImV4cCI6MjA1Nzc1Mzg2M30.bSVBdKG2VJNZgTEcVCd8AywX56LEpLgeVQ7Fb6QBmqw",
-    "VITE_API_URL": "/api"
-  },
-  "routes": [
-    {
-      "src": "/api/(.*)",
-      "dest": "https://api.jagobumn.com/$1",
-      "headers": {
-        "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
-        "Access-Control-Allow-Headers": "Content-Type, Authorization",
-        "Access-Control-Allow-Credentials": "true"
-      }
-    }
   ]
-} 
+}
