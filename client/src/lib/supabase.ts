@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 // Gunakan URL dari environment
-const baseURL = '/api';
+const baseURL = import.meta.env.VITE_API_URL || '/api';
 
 const api = axios.create({
   baseURL,
@@ -19,24 +19,14 @@ console.log(`> Base URL: ${baseURL}`);
 console.log(`> Environment: ${import.meta.env.MODE}`);
 console.log('========================');
 
-// Add request interceptor
+// Add request interceptor untuk logging
 api.interceptors.request.use(
   (config) => {
-    // Get appropriate token based on URL
+    // Get token based on URL
     let token;
-    
-    // Jika URL berkaitan dengan admin, gunakan token admin
     if (config.url?.startsWith('/admin')) {
       token = localStorage.getItem('admin-token');
-      console.log('Using admin token for admin endpoint:', config.url);
-    } 
-    // Jika URL berkaitan dengan questioner, gunakan token questioner
-    else if (config.url?.startsWith('/questioner')) {
-      token = localStorage.getItem('questioner-token');
-      console.log('Using questioner token for questioner endpoint:', config.url);
-    }
-    // Untuk URL lainnya, gunakan token user biasa
-    else {
+    } else {
       token = localStorage.getItem('token');
     }
     
@@ -44,7 +34,13 @@ api.interceptors.request.use(
       config.headers.Authorization = `Bearer ${token}`;
     }
     
-    console.log(`Sending request to: ${config.baseURL}${config.url}`);
+    // Log request untuk debugging
+    console.log('Request:', {
+      url: `${config.baseURL}${config.url}`,
+      method: config.method,
+      headers: config.headers
+    });
+    
     return config;
   },
   (error) => {
@@ -52,45 +48,18 @@ api.interceptors.request.use(
   }
 );
 
-// Add response interceptor
+// Add response interceptor untuk error handling
 api.interceptors.response.use(
   (response) => {
     return response;
   },
   (error) => {
-    if (error.response?.status === 401) {
-      // Identifikasi jenis rute dari URL
-      const url = error.config?.url || '';
-      
-      if (url.startsWith('/admin')) {
-        // Admin routes - clear admin token and redirect to admin login
-        console.log('Admin unauthorized, redirecting to admin login');
-        localStorage.removeItem('admin-token');
-        window.location.href = '/admin/login';
-      } else if (url.startsWith('/questioner')) {
-        // Questioner routes - clear questioner token and redirect to questioner login
-        console.log('Questioner unauthorized, redirecting to questioner login');
-        localStorage.removeItem('questioner-token');
-        window.location.href = '/questioner/login';
-      } else {
-        // User routes - clear token and redirect to login
-        console.log('User unauthorized, redirecting to auth');
-        localStorage.removeItem('token');
-        localStorage.removeItem('loginTime');
-        window.location.href = '/auth';
-      }
-    } else if (error.response) {
-      // Server merespons dengan kode status error
+    if (error.response) {
       console.error('API Error:', error.response.status, error.response.data);
     } else if (error.request) {
-      // Request dibuat tapi tidak ada respons
-      console.error('API Error: No response received', error.request);
-      if (error.code === 'ECONNABORTED') {
-        console.error('API Error: Request timeout. Server mungkin sedang sibuk atau tidak tersedia.');
-      }
+      console.error('No response received:', error.request);
     } else {
-      // Terjadi error saat menyiapkan request
-      console.error('API Error:', error.message);
+      console.error('Error:', error.message);
     }
     return Promise.reject(error);
   }
