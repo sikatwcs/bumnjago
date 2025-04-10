@@ -1,10 +1,12 @@
 import axios from 'axios';
 
-const baseURL = 'https://api.jagobumn.com';
+// Gunakan URL dari environment
+const baseURL = '/api';
 
 const api = axios.create({
   baseURL,
-  withCredentials: true,
+  // Set withCredentials ke false karena kita menggunakan token
+  withCredentials: false,
   headers: {
     'Content-Type': 'application/json',
     'Accept': 'application/json'
